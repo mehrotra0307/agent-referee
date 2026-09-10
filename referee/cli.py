@@ -7,6 +7,9 @@ import click
 from referee.config import get_provider_config, load_config
 from referee.entry_point import load_entry_point
 from referee.eval.runner import run_evaluation
+from referee.guardrails.input_validation import check_injection, check_pii
+from referee.guardrails.scope_check import check_scope
+from referee.guardrails.test_suite import ADVERSARIAL_TEST_CASES
 from referee.init_project import init_project
 
 _PROVIDERS = ["gemini", "openai", "anthropic"]
@@ -131,4 +134,59 @@ def eval_run(config: str):
 
     if report["critical_failures"] > 0:
         click.echo("\nBLOCKING: critical-severity test failure(s) detected.")
+        raise SystemExit(1)
+
+
+@main.group(name="guardrails")
+def guardrails_group():
+    """Test your configured guardrails against packaged adversarial attacks."""
+
+
+@guardrails_group.command(name="test")
+@click.option("--config", default="referee.yaml", show_default=True)
+@click.option(
+    "--local-only",
+    is_flag=True,
+    help="Skip the scope-check attack, which makes a real LLM call using your configured key.",
+)
+def guardrails_test(config: str, local_only: bool):
+    """Run packaged adversarial attacks against your configured guardrails."""
+    cfg = load_config(config)
+    input_cfg = cfg.get("guardrails", {}).get("input", {})
+    scope_cfg = input_cfg.get("scope_check", {})
+    provider_config = get_provider_config(cfg)
+
+    click.echo("Running packaged adversarial guardrail tests...\n")
+
+    blocked_count = 0
+    total = 0
+
+    for case in ADVERSARIAL_TEST_CASES:
+        check_type = case["check"]
+
+        if check_type == "scope" and (local_only or not scope_cfg.get("enabled")):
+            click.echo(f"[SKIP] {case['id']} ({case['category']}) — scope_check disabled or --local-only set")
+            continue
+
+        if check_type == "pii":
+            result = check_pii(case["input"])
+        elif check_type == "injection":
+            result = check_injection(case["input"])
+        else:
+            result = check_scope(case["input"], scope_cfg.get("description", ""), provider_config)
+
+        total += 1
+        blocked = not result["allowed"]
+        if blocked:
+            blocked_count += 1
+
+        click.echo(f"[{'PASS' if blocked else 'FAIL'}] {case['id']} ({case['category']})")
+        click.echo(f"       Attack simulated: {case['attack_description']}")
+        if not blocked:
+            click.echo("       This guardrail let the attack through — it was not caught.")
+
+    click.echo("\n--- SUMMARY ---")
+    click.echo(f"Blocked {blocked_count}/{total} adversarial attacks.")
+
+    if blocked_count < total:
         raise SystemExit(1)
