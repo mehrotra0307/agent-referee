@@ -152,7 +152,7 @@ def eval_run(config: str):
 
     reports_dir = Path("reports")
     reports_dir.mkdir(exist_ok=True)
-    report_path = reports_dir / f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    report_path = reports_dir / f"eval_run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     report_path.write_text(json.dumps(report, indent=2) + "\n")
     click.echo(f"Full report saved to: {report_path}")
 
@@ -184,6 +184,7 @@ def guardrails_test(config: str, local_only: bool):
 
     blocked_count = 0
     total = 0
+    case_results = []
 
     for case in ADVERSARIAL_TEST_CASES:
         check_type = case["check"]
@@ -209,8 +210,34 @@ def guardrails_test(config: str, local_only: bool):
         if not blocked:
             click.echo("       This guardrail let the attack through — it was not caught.")
 
+        case_results.append(
+            {
+                "id": case["id"],
+                "category": case["category"],
+                "attack_description": case["attack_description"],
+                "blocked": blocked,
+            }
+        )
+
     click.echo("\n--- SUMMARY ---")
     click.echo(f"Blocked {blocked_count}/{total} adversarial attacks.")
+
+    reports_dir = Path("reports")
+    reports_dir.mkdir(exist_ok=True)
+    report_path = reports_dir / f"guardrails_run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    report_path.write_text(
+        json.dumps(
+            {
+                "run_timestamp": datetime.now().isoformat(),
+                "total_attacks": total,
+                "blocked": blocked_count,
+                "results": case_results,
+            },
+            indent=2,
+        )
+        + "\n"
+    )
+    click.echo(f"Full report saved to: {report_path}")
 
     if blocked_count < total:
         raise SystemExit(1)
