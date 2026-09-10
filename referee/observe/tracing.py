@@ -3,7 +3,9 @@ from typing import Any
 from opentelemetry import trace
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter, SimpleSpanProcessor
+from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
+
+from referee.observe.console_summary import FriendlySpanExporter
 
 _tracer = None
 _configured_exporter = None
@@ -16,7 +18,7 @@ def _build_span_processor(observe_config: dict[str, Any]):
         # Synchronous on purpose: console output has no network latency to batch
         # against, and BatchSpanProcessor's background flush thread otherwise
         # outlives short-lived scripts and warns on a closed stdout at exit.
-        return SimpleSpanProcessor(ConsoleSpanExporter())
+        return SimpleSpanProcessor(FriendlySpanExporter())
 
     if exporter_name == "otlp":
         from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
