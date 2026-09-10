@@ -1,4 +1,6 @@
 import json
+import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -246,3 +248,20 @@ def demo():
         "agent, a trace recording every step above, and an evaluator scoring the answer — all "
         "with zero setup.\n\nNext: run `referee init` to wire this into your real agent."
     )
+
+
+@main.command()
+def dashboard():
+    """Launch the local Streamlit dashboard (reads local reports/, nothing hosted by us)."""
+    app_path = Path(__file__).parent / "dashboard" / "app.py"
+
+    try:
+        import streamlit  # noqa: F401
+    except ImportError:
+        click.echo(
+            "The dashboard needs Streamlit, which isn't installed by default. Install it with:\n\n"
+            "    pip install agent-referee[dashboard]\n"
+        )
+        raise SystemExit(1)
+
+    subprocess.run([sys.executable, "-m", "streamlit", "run", str(app_path)])
