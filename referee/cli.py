@@ -1,8 +1,12 @@
 import json
+from datetime import datetime
 from pathlib import Path
 
 import click
 
+from referee.config import get_provider_config, load_config
+from referee.entry_point import load_entry_point
+from referee.eval.runner import run_evaluation
 from referee.init_project import init_project
 
 _PROVIDERS = ["gemini", "openai", "anthropic"]
@@ -88,3 +92,43 @@ def dataset_new(output: str):
     }
     Path(output).write_text(json.dumps(dataset, indent=2) + "\n")
     click.echo(f"\nWrote {len(entries)} test case(s) to {output}. Run `referee eval run` next.")
+
+
+@main.group(name="eval")
+def eval_group():
+    """Run evaluations against your agent."""
+
+
+@eval_group.command(name="run")
+@click.option("--config", default="referee.yaml", show_default=True)
+def eval_run(config: str):
+    """Run your golden dataset against your agent and print a report. CI-ready."""
+    cfg = load_config(config)
+    agent_cfg = cfg["agent"]
+    dataset_path = cfg.get("eval", {}).get("dataset", "golden_dataset.json")
+
+    agent_fn = load_entry_point(agent_cfg["entry_point"])
+    provider_config = get_provider_config(cfg)
+
+    click.echo(f"Running evaluation for '{agent_cfg['name']}' against {dataset_path}...\n")
+
+    report = run_evaluation(dataset_path, agent_fn, provider_config, datetime.now().isoformat())
+
+    for result in report["results"]:
+        status = "PASS" if result["passed"] else "FAIL"
+        click.echo(f"[{status}] {result['id']} ({result['category']}, severity={result['severity']})")
+        click.echo(f"       {result['reason']}")
+
+    click.echo("\n--- SUMMARY ---")
+    click.echo(f"Passed: {report['passed']}/{report['total_tests']} ({report['pass_rate'] * 100:.0f}%)")
+    click.echo(f"Critical failures: {report['critical_failures']}")
+
+    reports_dir = Path("reports")
+    reports_dir.mkdir(exist_ok=True)
+    report_path = reports_dir / f"run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    report_path.write_text(json.dumps(report, indent=2) + "\n")
+    click.echo(f"Full report saved to: {report_path}")
+
+    if report["critical_failures"] > 0:
+        click.echo("\nBLOCKING: critical-severity test failure(s) detected.")
+        raise SystemExit(1)
