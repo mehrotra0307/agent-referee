@@ -1,7 +1,7 @@
 import functools
 import uuid
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
 
 from referee.config import get_provider_config, load_config
 from referee.guardrails.input_validation import validate_input
@@ -37,8 +37,8 @@ def _maybe_print_intro() -> None:
     _INTRO_SEEN_FILE.write_text("seen\n")
 
 
-def protect(config: str = "referee.yaml") -> Callable:
-    loaded_config = load_config(config)
+def protect(config: Union[str, dict] = "referee.yaml") -> Callable:
+    loaded_config = config if isinstance(config, dict) else load_config(config)
     provider_config = get_provider_config(loaded_config)
     tracer = get_tracer(loaded_config)
     process_session_id = str(uuid.uuid4())
