@@ -1,0 +1,72 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "agent-referee"
+version = "0.1.0"
+description = "Plug any AI agent into real evaluation scoring, guardrails, and observability tracing in minutes — framework-agnostic, 100% free, no signup, never touches your API key."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.9"
+authors = [
+    { name = "Ashish Mehrotra" }
+]
+keywords = [
+    "ai-agents",
+    "llm-evaluation",
+    "guardrails",
+    "observability",
+    "opentelemetry",
+    "llm",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Testing",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+dependencies = [
+    "click>=8.1",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0",
+    "rouge-score>=0.1.2",
+    "opentelemetry-api>=1.20",
+    "opentelemetry-sdk>=1.20",
+    "opentelemetry-exporter-otlp-proto-http>=1.20",
+]
+
+[project.optional-dependencies]
+embedding = ["sentence-transformers>=2.2"]
+dashboard = ["streamlit>=1.30"]
+gemini = ["google-genai>=0.1"]
+openai = ["openai>=1.0"]
+anthropic = ["anthropic>=0.30"]
+all = [
+    "sentence-transformers>=2.2",
+    "streamlit>=1.30",
+    "google-genai>=0.1",
+    "openai>=1.0",
+    "anthropic>=0.30",
+]
+dev = [
+    "pytest>=7.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/mehrotra0307/agent-referee"
+Repository = "https://github.com/mehrotra0307/agent-referee"
+Issues = "https://github.com/mehrotra0307/agent-referee/issues"
+
+[project.scripts]
+referee = "referee.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["referee"]
