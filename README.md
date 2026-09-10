@@ -1,5 +1,9 @@
 # Agent Referee
 
+[![CI](https://github.com/mehrotra0307/agent-referee/actions/workflows/ci.yml/badge.svg)](https://github.com/mehrotra0307/agent-referee/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](pyproject.toml)
+
 Plug any AI agent — however you built it, wherever you deployed it — into real evaluation
 scoring, real guardrails, and real observability tracing. In minutes, not days.
 
