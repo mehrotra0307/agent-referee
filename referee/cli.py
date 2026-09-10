@@ -6,13 +6,35 @@ import click
 
 from referee.config import get_provider_config, load_config
 from referee.entry_point import load_entry_point
+from referee.eval.deterministic import check_deterministic
 from referee.eval.runner import run_evaluation
 from referee.guardrails.input_validation import check_injection, check_pii
 from referee.guardrails.scope_check import check_scope
 from referee.guardrails.test_suite import ADVERSARIAL_TEST_CASES
 from referee.init_project import init_project
+from referee.protect import protect
 
 _PROVIDERS = ["gemini", "openai", "anthropic"]
+
+_DEMO_CONFIG = {
+    "agent": {"name": "demo-agent"},
+    "llm_provider": {"name": "gemini"},
+    "guardrails": {
+        "input": {"pii_check": True, "injection_check": True, "rate_limit_per_session": 1000},
+        "output": {"pii_check": True, "toxicity_and_groundedness_check": False},
+    },
+    "observe": {"exporter": "console"},
+}
+
+
+def _demo_agent(user_input: str) -> str:
+    lower = user_input.lower()
+    if "close" in lower or "hour" in lower:
+        return "We're open 11 AM to 11 PM, every day."
+    if "deliver" in lower:
+        return "We deliver within 5 km, with a flat delivery fee."
+    return "I can help with hours, menu, and delivery questions!"
+
 
 _DATASET_INTRO = """
 A golden dataset is just a list of questions your agent might get, and what a
@@ -190,3 +212,37 @@ def guardrails_test(config: str, local_only: bool):
 
     if blocked_count < total:
         raise SystemExit(1)
+
+
+@main.command()
+def demo():
+    """Zero-config, zero-API-key demo: eval + guardrails + tracing in ~30 seconds."""
+    click.echo(
+        "Agent Referee demo — no config file, no API key, nothing installed beyond this "
+        "package. This wraps a tiny built-in mock agent so you can see the full loop before "
+        "touching your own agent.\n"
+    )
+
+    protected_agent = protect(config=_DEMO_CONFIG)(_demo_agent)
+
+    click.echo("1. A normal question passes straight through, guardrails and tracing running silently:\n")
+    click.echo(f"   > {protected_agent('What time do you close?')}\n")
+
+    click.echo("2. A message containing PII gets caught by the input guardrail BEFORE the agent ever runs:\n")
+    click.echo(f"   > {protected_agent('call me back at 9876543210 please')}\n")
+
+    click.echo("3. A tiny evaluation, scoring the agent's real answer against what it must mention:\n")
+    eval_case = {
+        "id": "demo_eval_001",
+        "check": "contains_any",
+        "expected_contains": ["11 AM", "11 PM"],
+    }
+    eval_result = check_deterministic(eval_case, _demo_agent("What time do you close?"))
+    status = "PASS" if eval_result["passed"] else "FAIL"
+    click.echo(f"   [{status}] {eval_result['reason']}\n")
+
+    click.echo(
+        "That's the whole loop: a guardrail blocking bad input before it ever reaches your "
+        "agent, a trace recording every step above, and an evaluator scoring the answer — all "
+        "with zero setup.\n\nNext: run `referee init` to wire this into your real agent."
+    )
