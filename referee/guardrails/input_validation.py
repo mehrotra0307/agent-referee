@@ -24,6 +24,11 @@ _session_message_counts: dict[str, int] = {}
 
 
 def check_pii(user_input: str) -> dict[str, Any]:
+    """Regex-only PII check (email, phone, credit card). No API call.
+
+    Returns:
+        {"allowed": bool, "reason": str | None}
+    """
     for pii_type, pattern in PII_PATTERNS.items():
         if re.search(pattern, user_input):
             return {
@@ -38,6 +43,9 @@ def check_pii(user_input: str) -> dict[str, Any]:
 
 
 def check_injection(user_input: str) -> dict[str, Any]:
+    """Regex match against known prompt-injection phrasing (INJECTION_PATTERNS).
+    No API call. Returns {"allowed": bool, "reason": str | None}.
+    """
     lower_input = user_input.lower()
     for pattern in INJECTION_PATTERNS:
         if pattern in lower_input:
@@ -53,6 +61,11 @@ def check_injection(user_input: str) -> dict[str, Any]:
 
 
 def check_rate_limit(session_id: str, max_messages_per_session: int) -> dict[str, Any]:
+    """Count messages per session_id and block once max_messages_per_session
+    is exceeded. State is an in-memory dict, per-process only — see the
+    returned reason for why that's a real limitation in a multi-process
+    deployment, not just a note.
+    """
     count = _session_message_counts.get(session_id, 0) + 1
     _session_message_counts[session_id] = count
 
@@ -71,10 +84,20 @@ def check_rate_limit(session_id: str, max_messages_per_session: int) -> dict[str
 
 
 def reset_rate_limits() -> None:
+    """Clear in-memory rate-limit state. Mainly for tests and for a long-running
+    process that wants to start a fresh counting window."""
     _session_message_counts.clear()
 
 
 def validate_input(user_input: str, session_id: str, config: dict[str, Any]) -> dict[str, Any]:
+    """Run the configured input guardrails in order: rate limit, then PII,
+    then injection. Stops and returns at the first block. config is the
+    full guardrails.* section of referee.yaml. Does not run scope_check
+    (see referee/guardrails/scope_check.py) since that needs an LLM call.
+
+    Returns:
+        {"allowed": bool, "reason": str | None}
+    """
     input_config = config.get("input", {})
 
     if "rate_limit_per_session" in input_config:

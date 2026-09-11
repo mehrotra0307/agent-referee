@@ -15,6 +15,14 @@ Example answer: "YES" or "NO\""""
 
 
 def check_scope(user_input: str, description: str, provider_config: dict[str, Any]) -> dict[str, Any]:
+    """One LLM call asking whether user_input fits within description (the
+    plain-English scope the user wrote in referee.yaml's
+    guardrails.input.scope_check.description). Fails open on a call error
+    or an unparseable answer.
+
+    Returns:
+        {"allowed": bool, "reason": str | None}
+    """
     prompt = _SCOPE_PROMPT_TEMPLATE.format(description=description, message=user_input)
 
     try:

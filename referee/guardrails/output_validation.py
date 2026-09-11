@@ -27,6 +27,12 @@ Example answer: "NO NO\""""
 
 
 def check_output_pii(agent_response: str) -> dict[str, Any]:
+    """Regex-only check for PII leaking in the agent's own response (mirrors
+    check_pii on the input side). No API call.
+
+    Returns:
+        {"allowed": bool, "reason": str | None}
+    """
     for pii_type, pattern in PII_PATTERNS.items():
         if re.search(pattern, agent_response):
             return {
@@ -46,6 +52,14 @@ def check_toxicity_and_groundedness(
     provider_config: dict[str, Any],
     grounding_context: str = "",
 ) -> dict[str, Any]:
+    """One LLM call checking toxicity, and groundedness too if grounding_context
+    is non-empty (i.e. the user configured guardrails.output.grounding_context
+    in referee.yaml). Fails open (allowed=True) on a call error or an
+    unparseable answer, by explicit design choice — see the returned reason.
+
+    Returns:
+        {"allowed": bool, "reason": str | None}
+    """
     if grounding_context:
         prompt = _TOXICITY_AND_GROUNDEDNESS_PROMPT.format(
             grounding_context=grounding_context, user_input=user_input, agent_response=agent_response
@@ -86,6 +100,13 @@ def validate_output(
     config: dict[str, Any],
     provider_config: dict[str, Any],
 ) -> dict[str, Any]:
+    """Run the configured output guardrails in order: PII leak, then
+    toxicity/groundedness. Stops and returns at the first block. config is
+    the full guardrails.* section of referee.yaml.
+
+    Returns:
+        {"allowed": bool, "reason": str | None}
+    """
     output_config = config.get("output", {})
 
     if output_config.get("pii_check", True):
