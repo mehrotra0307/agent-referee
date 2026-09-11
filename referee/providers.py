@@ -1,9 +1,13 @@
 """Provider-agnostic LLM calls, shared by the LLM-judge evaluator and the
-scope-check guardrail. Each SDK is imported lazily inside its own _call_*
-function so installing agent-referee never requires all three."""
+scope-check guardrail. All three SDKs ship in core (see pyproject.toml for
+why) so this file can import them plainly, no lazy-import dance needed."""
 
 import os
 from typing import Any
+
+from anthropic import Anthropic
+from google import genai
+from openai import OpenAI
 
 _DEFAULT_MODELS = {
     "gemini": "gemini-3.1-flash-lite",
@@ -33,28 +37,12 @@ def _get_api_key(provider_name: str) -> str:
 
 
 def _call_gemini(prompt: str, model: str) -> str:
-    try:
-        from google import genai
-    except ImportError as exc:
-        raise ImportError(
-            "The 'gemini' provider needs the google-genai SDK. Install it with:\n\n"
-            "    pip install agent-referee[gemini]\n"
-        ) from exc
-
     client = genai.Client(api_key=_get_api_key("gemini"))
     response = client.models.generate_content(model=model, contents=prompt)
     return response.text
 
 
 def _call_openai(prompt: str, model: str) -> str:
-    try:
-        from openai import OpenAI
-    except ImportError as exc:
-        raise ImportError(
-            "The 'openai' provider needs the openai SDK. Install it with:\n\n"
-            "    pip install agent-referee[openai]\n"
-        ) from exc
-
     client = OpenAI(api_key=_get_api_key("openai"))
     response = client.chat.completions.create(
         model=model,
@@ -64,14 +52,6 @@ def _call_openai(prompt: str, model: str) -> str:
 
 
 def _call_anthropic(prompt: str, model: str) -> str:
-    try:
-        from anthropic import Anthropic
-    except ImportError as exc:
-        raise ImportError(
-            "The 'anthropic' provider needs the anthropic SDK. Install it with:\n\n"
-            "    pip install agent-referee[anthropic]\n"
-        ) from exc
-
     client = Anthropic(api_key=_get_api_key("anthropic"))
     response = client.messages.create(
         model=model,
