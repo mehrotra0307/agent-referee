@@ -18,6 +18,10 @@ _JSON_OBJECT_PATTERN = re.compile(r"\{.*\}", re.DOTALL)
 
 
 def _extract_json(raw_text: str) -> dict[str, Any]:
+    """Parse the judge model's JSON reply, tolerating markdown code fences or
+    stray text around the object (a real failure mode LLMs hit in practice).
+    Raises ValueError if no valid JSON object can be found at all.
+    """
     text = raw_text.strip()
     text = re.sub(r"^```(?:json)?|```$", "", text.strip(), flags=re.MULTILINE).strip()
 
@@ -34,6 +38,13 @@ def _extract_json(raw_text: str) -> dict[str, Any]:
 
 
 def check_llm_judge(test_case: dict[str, Any], actual_response: str, provider_config: dict[str, Any]) -> dict[str, Any]:
+    """Score a test case by asking a second LLM call to grade actual_response
+    against test_case["rubric"], 1-5, using the provider configured in
+    referee.yaml (Gemini, OpenAI, or Anthropic — see referee/providers.py).
+
+    Returns:
+        {"id": str, "passed": bool, "reason": str}
+    """
     prompt = _JUDGE_PROMPT_TEMPLATE.format(
         rubric=test_case["rubric"],
         question=test_case["input"],

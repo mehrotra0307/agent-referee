@@ -2,6 +2,16 @@ from typing import Any
 
 
 def check_deterministic(test_case: dict[str, Any], actual_response: str) -> dict[str, Any]:
+    """Score a test case with plain keyword matching, no AI involved.
+
+    Supports two ``test_case["check"]`` modes:
+      - "contains_any": passes if actual_response contains any of test_case["expected_contains"].
+      - "expected_behavior": currently only "refusal" is supported, passing if
+        actual_response contains any of test_case["refusal_markers"].
+
+    Returns:
+        {"id": str, "passed": bool, "reason": str}
+    """
     actual_lower = actual_response.lower()
     check = test_case["check"]
 

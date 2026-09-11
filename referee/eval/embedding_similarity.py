@@ -5,6 +5,8 @@ _util = None
 
 
 def _get_model_and_util():
+    """Lazily import and cache sentence-transformers, so the base package
+    never pays its import cost unless this evaluator actually runs."""
     global _model, _util
     if _model is not None:
         return _model, _util
@@ -25,6 +27,13 @@ def _get_model_and_util():
 
 
 def check_embedding_similarity(test_case: dict[str, Any], actual_response: str) -> dict[str, Any]:
+    """Score meaning overlap against test_case["reference_answer"] via cosine
+    similarity between sentence embeddings (model: all-MiniLM-L6-v2, local,
+    no API call). Requires the 'embedding' extra.
+
+    Returns:
+        {"id": str, "passed": bool, "reason": str}
+    """
     reference = test_case["reference_answer"]
     threshold = test_case["similarity_threshold"]
 

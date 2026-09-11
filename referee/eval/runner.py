@@ -6,15 +6,15 @@ from referee.eval.embedding_similarity import check_embedding_similarity
 from referee.eval.llm_judge import check_llm_judge
 from referee.eval.text_similarity import check_text_similarity
 
-_EVAL_TYPES_NEEDING_PROVIDER = {"llm_judge"}
-
 
 def load_dataset(path: str) -> dict[str, Any]:
+    """Load a golden dataset JSON file (see docs/your-first-dataset.md for the shape)."""
     with open(path, "r") as f:
         return json.load(f)
 
 
 def _route(test_case: dict[str, Any], actual_response: str, provider_config: dict[str, Any]) -> dict[str, Any]:
+    """Dispatch one test case to the evaluator matching its eval_type field."""
     eval_type = test_case["eval_type"]
 
     if eval_type == "deterministic":
@@ -42,6 +42,18 @@ def run_evaluation(
     provider_config: dict[str, Any],
     run_timestamp: str,
 ) -> dict[str, Any]:
+    """Run every test case in dataset_path against agent_fn and build a report.
+
+    A pure function on purpose (no file writes, no printing) so both the CLI
+    and tests can call it directly. agent_fn is whatever the entry_point in
+    referee.yaml resolves to — it may or may not be wrapped in
+    @referee.protect() itself; this runner doesn't care either way.
+
+    Returns:
+        A report dict with run_timestamp, dataset_version, total_tests,
+        passed, failed, pass_rate, critical_failures, and the full list of
+        per-test-case results.
+    """
     dataset = load_dataset(dataset_path)
     results = []
 

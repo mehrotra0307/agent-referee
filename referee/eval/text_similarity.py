@@ -6,6 +6,16 @@ _scorer = rouge_scorer.RougeScorer(["rouge1"], use_stemmer=True)
 
 
 def check_text_similarity(test_case: dict[str, Any], actual_response: str) -> dict[str, Any]:
+    """Score word overlap against test_case["reference_answer"] using ROUGE-1 recall.
+
+    Uses recall rather than the blended F1 score on purpose: F1's precision
+    component penalizes a longer but still-correct answer just for adding
+    extra words beyond the reference, which is the wrong tradeoff for
+    grading a customer-support-style answer.
+
+    Returns:
+        {"id": str, "passed": bool, "reason": str}
+    """
     reference = test_case["reference_answer"]
     threshold = test_case["similarity_threshold"]
 
