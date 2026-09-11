@@ -4,228 +4,236 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](pyproject.toml)
 
-However you built your agent, and wherever you deployed it, plug it into Agent Referee and in
-a few minutes you get real evaluation scoring, real guardrails, and real observability tracing.
+You built an agent. Cool. Does it lie? Does it leak your users' phone numbers? Does it fall
+over the first time someone types "ignore your instructions"? You don't know, because nobody
+tells you this stuff by default. That's the whole reason this exists.
 
-It does not matter if you wrote plain Python calling Gemini or OpenAI directly, or if you used
-a framework like LangGraph or CrewAI, or if your agent lives on GCP, AWS, or your own laptop.
-If your agent is a piece of code that takes a question in and gives an answer back, Agent
-Referee can wrap it.
-
-100% free forever. No account. No signup. No credit card. Your API key never touches this tool,
-ever, not even once, and we explain exactly why a little further down.
-
-This project is also meant to teach. If you have never worked with agent evaluation,
-guardrails, or observability before, and the words themselves sound intimidating, this is a
-good place to actually learn them by doing, not just reading about them. Every command explains
-what it just did and why, in plain language, right there in your terminal.
+Agent Referee plugs into any agent, however you built it, wherever it lives, and gives it three
+things almost nobody sets up on their own: a report card (**evaluation**), a bouncer
+(**guardrails**), and a flight recorder (**observability**). One `pip install`, one decorator,
+zero API keys typed into anything, and it teaches you what it's doing while it does it.
 
 ![Agent Referee demo](docs/assets/demo.gif)
 
-*(If the GIF above is missing, it just hasn't been generated yet. See
-[docs/assets/demo.tape](docs/assets/demo.tape) for the one command that makes it, using the
-real `referee demo` command below.)*
+**Who this is for, honestly:**
+- Never built an agent before and don't know what "guardrails" even means → good, start here.
+- Built a few agents, shipped them, and quietly hoped nothing bad would happen → also you.
+- Already know evaluation/guardrails/observability cold and just want the fastest possible
+  plug-in → skip to [the flow](#the-full-flow-teach-first-then-do), it's still faster than
+  writing your own.
 
-## What is Agent Referee, really
+Nobody gets talked down to and nobody gets left behind. That's the actual design goal, not a
+marketing line.
 
-Think of it in three simple pieces. Nobody explains these well the first time, so here they are
-in plain English.
+## The one rule we will never break
 
-**Evaluation** is a report card for your agent. You write down some questions your agent might
-get asked, and what a good answer should look like. Agent Referee then asks your agent those
-questions for you, checks the answers, and tells you what passed and what failed, and why. You
-do this after your agent has already answered, like a teacher grading homework.
+Agent Referee will never ask you to paste an API key into a prompt, a wizard, or a config file.
+Ever. Not now, not in version 47, not if you beg.
 
-**Guardrails** are a bouncer standing at the door. Before a risky message ever reaches your
-agent, and before your agent's answer ever reaches your user, guardrails check it in real time
-and can block it. A guardrail does not care if an answer is a *good* answer. It only cares if a
-message is *safe* and *on topic*.
+Your key lives in one `.env` file, on your machine, that you create yourself. We read it with
+`os.getenv()`, the exact same boring, standard way the official Google/OpenAI/Anthropic SDKs
+already do. There is no server on our end receiving it, because there is no server, period. A
+CLI tool asking you to type in a secret is a phishing pattern with a friendly logo slapped on
+it. We just don't do that.
 
-**Observability**, also called tracing, is a flight recorder. It does not change anything your
-agent does. It just quietly writes down what happened, step by step, so that later, if something
-goes wrong or runs slowly, you can look back and see exactly where the time went and exactly
-what happened.
-
-Most people building their first agent have never set up any of these three things. Agent
-Referee gives you all three at once, with almost no code, and explains each one to you as it
-runs.
-
-## The one promise we will not break
-
-Agent Referee will never ask you to paste an API key anywhere. Not in a terminal prompt, not in
-a setup wizard, not in a config file.
-
-The only place your key ever lives is a `.env` file on your own computer, which you create
-yourself. Agent Referee reads it the exact same way the official Google, OpenAI, and Anthropic
-libraries already do, using a standard function called `os.getenv()`. Your key is never sent to
-us, never stored by us, and never seen by us, because there is no "us" in the loop at all. It is
-just your computer reading its own file.
-
-A command line tool asking you to type in a secret is one of the oldest tricks in phishing. So
-this is not a feature we might relax later if it becomes inconvenient. It is a line we do not
-cross, on purpose, by design.
-
-## Try it in 30 seconds, before installing anything for real
+## Try it before you install anything you'll actually use
 
 ```bash
 pip install agent-referee
 referee demo
 ```
 
-This runs a tiny built in example agent. No API key, no config file, nothing else to set up.
-You will see, in order:
+Quick, important clarification because people get confused here: **this does not touch your
+real agent.** `referee demo` runs a tiny, fake, built-in agent that ships inside the package
+itself, basically an if/else pizza-shop bot. It's not calling any real AI. The whole point is
+to show you what this tool does before you trust it with something real, no key, no setup, no
+risk, kind of like sitting in a display car at the dealership before you buy one, except the
+car is `pip install`-able.
 
-1. A normal question passing straight through your agent, with a full trace printed underneath
-   showing every step that happened along the way.
-2. A message containing a phone number getting blocked automatically, before your agent even
-   sees it.
-3. A tiny evaluation, where Agent Referee checks a real answer from the agent against what a
-   correct answer needed to mention, and tells you if it passed.
+In about 30 seconds you'll watch: a normal question pass straight through with a live trace
+underneath it, a message with a fake phone number get blocked before the fake agent even sees
+it, and a tiny grading check pass. That's the entire pitch, compressed.
 
-That is the entire pitch of this project, shown to you in under a minute, before you have
-touched your own agent at all.
+## The big picture
 
-## The full end to end flow, plugging in your real agent
+```mermaid
+graph LR
+    A["Your agent function<br/>(unchanged, any framework)"] 
+    P["@referee.protect()"]
+    IN["Input guardrails<br/>PII · injection · rate limit · scope"]
+    OUT["Output guardrails<br/>PII leak · toxicity · groundedness"]
+    TR["Trace, printed to your terminal"]
+    EV["referee eval run<br/>(separate command, offline grading)"]
 
-This is the exact order everything happens in, step by step, with no steps skipped.
+    P --> IN
+    IN -- safe --> A
+    A --> OUT
+    OUT -- safe --> DONE["Answer goes back to your user"]
+    P -.records.-> TR
+    EV -.grades.-> A
+```
 
-### Step 1. Install the core package
+Guardrails and tracing wrap every live call, automatically. Evaluation is a separate, deliberate
+command you run when you want a report card, not something that runs on every message.
+
+## The full flow, teach-first, then do
+
+Every step below follows the same shape: **what this is, in plain English, first. Then the
+command.** That's on purpose. If you skip the explanations you'll still get it working, but
+you'll have learned nothing, and learning is half of what this project is for.
+
+### Step 1: Install it
+
+**What's happening:** `pip` is Python's package manager, the thing that downloads and installs
+libraries. This one command gets you the whole tool.
 
 ```bash
 pip install agent-referee
 ```
 
-This install is small and fast on purpose. It does not pull in any heavy machine learning
-libraries by default. A few advanced features need extra pieces, and you only install those if
-you actually use them. More on that near the bottom of this README.
+It's fast on purpose. No PyTorch, no gigabyte downloads. (There are two genuinely heavy optional
+features later, explained honestly near the bottom, not hidden.)
 
-### Step 2. Run the setup wizard
+### Step 2: Meet the setup wizard
+
+**What's happening:** before Agent Referee can watch your agent, it needs three facts about it:
+where the code lives, what it's supposed to talk about, and which AI company you use. That's it.
+No key, ever, at any point in this step.
 
 ```bash
 referee init
 ```
 
-It will ask you three plain questions:
+It asks:
+1. Where your agent function lives, e.g. `agent/my_agent.py:ask_my_agent`.
+2. One sentence describing what your agent is allowed to talk about (used later to catch
+   completely off-topic questions, like someone asking your pizza-shop bot for tax advice).
+3. Which provider you use: Gemini, OpenAI, or Anthropic.
 
-- Where does your agent live. This is a file path and a function name, like
-  `agent/my_agent.py:ask_my_agent`.
-- What is your agent allowed to talk about, in one sentence. This is used later to catch
-  questions that are completely off topic.
-- Which LLM provider you use, Gemini, OpenAI, or Anthropic. This is only needed for the one or
-  two checks that must ask an LLM a question of their own, like "does this answer sound toxic."
+This writes one file, `referee.yaml`, plain text, safe to commit to git. It also makes sure your
+`.env` file is in `.gitignore`, so you can never accidentally commit a key even if you tried.
 
-It will never ask for a key. When it finishes, it creates a file called `referee.yaml` in your
-project, which holds all of this in plain text, safe to commit to git. It also makes sure your
-`.env` file is listed in `.gitignore`, so your key can never be committed by accident.
+### Step 3: Get an API key (skip this if you already have one)
 
-### Step 3. Add your key, locally, yourself
+**What's happening:** an API key is just a password that proves to an AI company's servers that
+it's really you making the request, so they know who to bill (or not bill, on a free tier).
+Never made one? Here's the fastest, free option:
+
+- **Gemini (recommended if you're starting from zero):** go to
+  [aistudio.google.com](https://aistudio.google.com), sign in with any Google account, click
+  "Get API key." No credit card. This is separate from a full Google Cloud project, and if you've
+  built with ADK and have GCP's $300 trial credit, you don't need to touch any of that just to
+  get this key.
+- **OpenAI:** [platform.openai.com/api-keys](https://platform.openai.com/api-keys). Needs
+  billing set up first, no free tier.
+- **Anthropic:** [console.anthropic.com](https://console.anthropic.com). Same deal, billing
+  required.
+
+Whichever you picked in Step 2, save it in a `.env` file, in the same folder as your agent:
 
 ```bash
 echo "GEMINI_API_KEY=your_key_here" > .env
 ```
 
-Swap the variable name if you picked OpenAI or Anthropic in step 2. This file lives only on your
-computer. Agent Referee reads it locally and nothing more.
+(Swap the variable name if you picked OpenAI or Anthropic.)
 
-### Step 4. Wrap your agent with one decorator
+### Step 4: Add one decorator
 
-This is the only code change you make. Find the function in your own code that takes a
-question and returns an answer, and add one line above it.
+**What's happening:** this is the only line you add to your actual code. Find the function that
+takes a question in and returns an answer, and put this directly above it.
 
 ```python
 import referee
 
 @referee.protect(config="referee.yaml")
 def my_agent(user_input: str) -> str:
-    # everything below this line is your own code, completely unchanged
-    ...
+    ...   # your existing code, completely untouched
 ```
 
-Here is what that one line quietly does for you, every single time your agent is called, in
-this exact order:
+From now on, every call to `my_agent` quietly does five things, in order: starts a trace, runs
+your input guardrails (a block here means your real function never even runs), calls your
+actual code, runs your output guardrails on the answer, ends the trace. You never write any of
+that plumbing. One line did it.
 
-1. It starts a trace, which is a timer that records everything that happens next.
-2. It runs your input guardrails. If the message looks unsafe, off topic, or like someone is
-   trying to jailbreak your agent, it gets blocked right here, and your own function never even
-   runs.
-3. It calls your actual agent function, completely unchanged.
-4. It runs your output guardrails on whatever your agent just said, checking for things like
-   leaked personal information.
-5. It finishes the trace and hands you back the final answer.
+**If you built with Google's ADK:** your agent doesn't look like a plain function, it's a
+`Runner` that speaks in async events. That's fine, you just need a one-function adapter that
+awaits your ADK agent and hands back the plain text of its final answer. The complete, verified
+pattern is in [`examples/adk_example.py`](examples/adk_example.py), same one-decorator promise,
+just with ADK's own shape underneath it instead of a bare function.
 
-You never write any of that yourself. You do not open a trace, you do not close a trace, you do
-not call a guardrail function by hand. One decorator does the whole thing.
+**Checkpoint, don't skip this:** before doing anything else, run your agent once, by hand, with
+any question, and actually look at the output. You should see guardrail and trace lines printed
+underneath the answer. If you see that, the wiring is correct and you've earned the right to
+move on. If you don't see it, something's off in `referee.yaml` before your first real one.
 
-The very first time this decorator actually runs, it will print a short, one time explanation
-of what a "trace" and a "span" are, so you are not left guessing. It only shows this once.
+### Step 5: Build a test list, with zero API calls
 
-### Step 5. Build your first golden dataset, fully offline
+**What's happening:** a golden dataset is just a list of questions and what a correct answer
+should mention, so you can check your agent's real answers automatically instead of reading
+every single one yourself forever.
 
 ```bash
 referee dataset new
 ```
 
-This is a simple back and forth wizard, right there in your terminal. It asks you a question a
-user might type, and what a correct answer needs to mention, and repeats until you are done.
-Nothing here calls an LLM, and no key is needed for this step, on purpose, so that even your very
-first dataset costs nothing to build. It writes everything into a file called
-`golden_dataset.json`.
+A back-and-forth wizard, right in your terminal. Fully offline, no key needed, on purpose, so
+your very first test list costs nothing. There's also a small example dataset shipped with the
+tool for inspiration, the wizard tells you exactly where to find it. Full walkthrough:
+[docs/your-first-dataset.md](docs/your-first-dataset.md).
 
-There is also a small example dataset shipped with the tool that you can read for ideas. The
-wizard tells you exactly where to find it. See
-[docs/your-first-dataset.md](docs/your-first-dataset.md) for a full walkthrough.
+### Step 6: Grade your agent against that list
 
-### Step 6. Score your agent against that dataset
+**What's happening:** this is the "report card" moment. Your agent gets asked every question you
+just wrote, and each answer gets checked and explained in one plain sentence.
 
 ```bash
 referee eval run
 ```
 
-This reads your `referee.yaml`, finds your agent, and asks it every single question in your
-dataset. For each one, it checks the real answer against what you said a correct answer needed,
-and prints a plain sentence explaining why it passed or failed. At the end it saves a full
-report as a JSON file inside a `reports` folder, and if anything marked "critical" failed, it
-exits with an error code on purpose, so this same command can block a bad deploy in a CI
-pipeline like GitHub Actions.
+Saves a full report to a `reports/` folder, and exits with an error code if anything marked
+"critical" failed, on purpose, so the exact same command can block a bad deploy in a CI pipeline.
 
-### Step 7. Attack your own guardrails on purpose
+### Step 7: Attack your own guardrails, on purpose
+
+**What's happening:** a guardrail you've never actually tested is a guardrail you're just
+hoping works. This throws a small set of real attacks (prompt-injection phrasing, fake emails,
+fake phone numbers, off-topic questions) at whatever you've got configured, and tells you which
+ones actually got caught.
 
 ```bash
 referee guardrails test
 ```
 
-This throws a small packaged list of real attack attempts at your configured guardrails, things
-like prompt injection phrases and fake email addresses and phone numbers, and tells you whether
-each one actually got blocked. Most of these checks are free and run instantly on your own
-computer with no internet call at all. If you turned on the "is this on topic" check, one of the
-attacks does make a real call using your own key, so add `--local-only` if you want to skip that
-and only run the free checks.
+**Never even heard the word "guardrail" before today?** Good news: this command assumes exactly
+that. It doesn't require you to have set anything up first: the PII and injection checks are
+always on and run instantly, for free, with zero setup. Add `--local-only` if you've also turned
+on the topic-scope check and want to skip the one attack that spends a real API call.
 
-### Step 8. Look at everything in one place
+### Step 8: Look at everything in one place (optional, but nice)
+
+**What's happening:** a small local webpage showing your last report card and your last
+guardrail attack results, side by side.
 
 ```bash
+pip install agent-referee[dashboard]
 referee dashboard
 ```
 
-This opens a small dashboard in your browser, running only on your own computer, showing your
-latest evaluation report and your latest guardrail test results side by side. Nothing here is
-hosted by us. If you have separately connected a real tracing backend like Langfuse, this page
-links out to it instead of trying to rebuild it badly.
+This is the one step that needs a second install command, and here's why, honestly: the
+dashboard is built on Streamlit, which drags in about 180MB of its own dependencies (mostly
+`pyarrow`, for a data table you'll look at maybe twice a day). That's real weight for something
+optional, so it's opt-in instead of forced on everyone. Nothing here is hosted by anyone but
+you, it's a page rendered on your own machine.
 
-That is the whole flow, start to finish. Nothing above needs anything beyond your own agent, your
-own key in your own `.env` file, and these eight commands, roughly in this order.
+That's the whole flow. Steps 1 through 7 need exactly one install command, ever. Step 8 is a
+nice-to-have that costs one more, explained instead of hidden.
 
-## The one place you still write a little code by hand
+## The one place you still write code by hand
 
-Almost everything above is fully automatic once the decorator is in place. There is exactly one
-exception, and it exists for an honest technical reason, not because we got lazy.
-
-If your agent calls tools, for example a function that actually places an order or sends an
-email, Agent Referee cannot see inside that decision from the outside. The decorator only wraps
-the outer function, the one that takes a question and returns an answer. It cannot see what
-happens in the middle. So if you want to block a specific tool call before it runs, for example
-limiting how many orders one session can place, you add one small check right before that tool
-actually runs.
+Everything above is automatic once the decorator's in place, except one thing, for an honest
+technical reason, not laziness: if your agent calls a *tool* (placing a real order, sending a
+real email), the decorator can't see inside that decision. It only wraps the outer function.
+So blocking a specific tool call needs one manual line, right before the tool actually runs:
 
 ```python
 from referee.guardrails.execution_layer import check_tool_call
@@ -236,57 +244,89 @@ if not result["allowed"]:
 # only now does your tool actually run
 ```
 
-That is the only manual wiring in the entire project. Everything else, guardrails and tracing
-both, is fully automatic from the one decorator in step 4.
+That's the only hand-written wiring anywhere in this project.
 
-## What it actually contains
+## What's actually in the box
 
-- **Evaluation**, with five different ways to score an answer. Exact phrase matching, checking
-  for a refusal, word overlap scoring called ROUGE, meaning based scoring using embeddings, and
-  a second LLM grading the first one's answer against a rubric you write.
-- **Guardrails**, checking for personal information, prompt injection attempts, message rate
-  limits, whether a question is on topic, and whether an answer sounds toxic or made something
-  up. The cheap, free, instant checks always run before the ones that cost an API call.
-- **Observability**, using the same open standard, OpenTelemetry, that Google Cloud and AWS use
-  themselves. By default it prints a clean, readable trace straight to your terminal. You can
-  also point it at any OpenTelemetry compatible backend if you want a permanent, searchable
-  history instead of just console output.
+- **Evaluation**: 5 scoring methods, exact phrase match, refusal detection, ROUGE word-overlap,
+  meaning-based embedding similarity, and a second LLM grading the first one against a rubric
+  you write.
+- **Guardrails**: PII detection, prompt-injection detection, rate limiting, topic-scope
+  enforcement, toxicity and groundedness checks. Free checks always run before the ones that
+  cost an API call.
+- **Observability**: real OpenTelemetry, the same open standard Google Cloud and AWS use, not a
+  reinvented wheel. Prints clean, readable traces to your terminal by default; point it at any
+  OTLP-compatible backend (Langfuse Cloud's free tier, for instance) if you want permanent,
+  searchable history instead.
 
-It works with plain Python calling Gemini, OpenAI, or Anthropic directly, and with LangGraph and
-CrewAI. All four are in the [examples](examples/) folder as complete, working files, not just
-snippets. Agent Referee itself never imports any of those frameworks. It only ever wraps a
-plain function, so it will keep working with whatever framework comes along next.
+Works with plain Python + Gemini/OpenAI/Anthropic, LangGraph, CrewAI, and Google's ADK, all four
+as complete working files in [examples/](examples/), not snippets. Agent Referee itself never
+imports any of those frameworks, so it keeps working with whatever shows up next year too.
 
-## Optional extras, only install what you use
+## Testing this yourself, right now, before you install it for real
 
-The base install stays small on purpose. A couple of features need extra libraries, so they are
-kept separate and only installed if you ask for them.
+You don't need PyPI to try this. You don't need a new terminal, either, the one you're already
+in is fine. Clone it and run it straight from source:
 
 ```bash
-pip install agent-referee[embedding]   # meaning based scoring, needs sentence-transformers
-pip install agent-referee[dashboard]   # the local dashboard, needs streamlit
-pip install agent-referee[gemini]      # Google's SDK
-pip install agent-referee[openai]      # OpenAI's SDK
-pip install agent-referee[anthropic]   # Anthropic's SDK
-pip install agent-referee[all]         # everything above, all at once
+git clone https://github.com/mehrotra0307/agent-referee.git
+cd agent-referee
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .
+referee demo
 ```
 
-You only ever need the one SDK matching whichever provider you picked in `referee init`.
+That `-e` means "editable." Python runs the code straight from this folder, so if you go edit
+something in `referee/`, your very next `referee` command uses the change immediately, no
+reinstalling. Once `referee demo` works, walk through Steps 2 onward above against a real toy
+agent of your own before trusting it with anything that matters.
 
-## Want to learn more, slowly
+## Optional extras, and why they're optional
 
-- [docs/how-it-works.md](docs/how-it-works.md), the three pillars explained again, more slowly,
-  for someone who has genuinely never heard these words before today.
-- [docs/your-first-dataset.md](docs/your-first-dataset.md), a full worked example of building a
-  golden dataset by hand, question by question.
+```bash
+pip install agent-referee[embedding]   # semantic-similarity scoring, needs PyTorch, ~395MB
+pip install agent-referee[dashboard]   # the local web UI, needs Streamlit, ~180MB
+pip install agent-referee[all]         # both, if you want everything
+```
 
-## Why this project exists
+Everything else, including all three provider SDKs (Gemini, OpenAI, Anthropic), ships in core.
+We checked actual install sizes before deciding, not vibes: those three together add well under
+100MB, and picking one is a question `referee init` asks you on your very first run, not an edge
+case worth a second command. `sentence-transformers` and `streamlit` are each 3-4x heavier than
+that combined, for features the guided flow above doesn't even touch by default. Weight only
+where weight is earned.
 
-This started as a small, hand built project, writing every evaluator, every guardrail, and
-every trace by hand, on purpose, to actually learn how these three pieces work underneath,
-instead of just enabling a checkbox in someone else's dashboard. Agent Referee takes that same
-hand built logic and makes it reusable, so that anyone plugging in their own agent gets the same
-lesson, taught to them automatically, one command at a time.
+## Publishing, versions, and "do I have to redo everything"
+
+Short answer: yes, a little, and it's normal. Pushing to GitHub and publishing to PyPI are two
+separate things. `pip install agent-referee` only ever sees what's been explicitly published to
+PyPI, so a change sitting on GitHub doesn't reach anyone who already ran `pip install` until a
+new version gets built and uploaded. That's not a flaw, it's how every Python package works,
+including ones with a hundred million downloads. Bump the version number, `python -m build`,
+`twine upload`, done. A minute of ceremony per release, not a redesign.
+
+## Want the deeper explanation
+
+- [docs/how-it-works.md](docs/how-it-works.md): the three pillars again, slower, for someone
+  who's never heard these words before today.
+- [docs/your-first-dataset.md](docs/your-first-dataset.md): a full worked example of building a
+  golden dataset by hand.
+
+## What this is not
+
+Being honest about scope, grandma-style: this is not a hosted service, there's nothing to sign
+into and nothing that can go down on our end because there's no "our end." It's not a
+replacement for something like Langfuse or Datadog if you need enterprise-scale trace storage
+across a whole company, point it at one of those as an OTLP backend instead. It's not a
+fine-tuned safety classifier, the guardrails here are the same free, tiered approach
+(regex → embeddings → LLM call) that real teams actually start with before reaching for
+anything fancier. And it will never, ever ask for your API key.
+
+## Contributing
+
+Typos, new examples, new guardrail checks, doc fixes, all welcome. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for setup and the project's docstring conventions.
 
 ## License
 

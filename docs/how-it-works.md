@@ -93,7 +93,7 @@ rejecting an order for an invalid pizza size, have to intercept something happen
 your agent's own tool calling loop, not at the boundary of your top level function. A decorator
 wrapped around `my_agent(user_input: str) -> str` structurally cannot see into that loop. This
 is the one deliberate exception to "just a decorator." See the README's
-[one place you still write a little code by hand](../README.md#the-one-place-you-still-write-a-little-code-by-hand)
+[one place you still write code by hand](../README.md#the-one-place-you-still-write-code-by-hand)
 section for the one line fix.
 
 ## Where to go next
