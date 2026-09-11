@@ -21,11 +21,27 @@ Here's what was just created, and why:
     Agent Referee reads it the same way the official Google/OpenAI/Anthropic
     SDKs do — os.getenv() — and never asks you to paste it anywhere.
 
-Next step: create a .env file in this directory and add:
+What to do next, in order:
 
-    {env_var}=your_key_here
+  1. Create a .env file in this directory and add:
 
-Then run `referee eval run` to try your first evaluation.
+       {env_var}=your_key_here
+
+  2. Add one decorator above your agent's function:
+
+       import referee
+
+       @referee.protect(config="referee.yaml")
+       def my_agent(user_input: str) -> str:
+           ...
+
+  3. Run your agent once, by hand, with any question. Before you build a whole
+     dataset, just check you can actually see the guardrail and trace output
+     printed underneath the answer. If you see that, it's wired up correctly
+     and you're ready for the next step.
+
+  4. Then run `referee dataset new` to build your first test list, and
+     `referee eval run` to grade your agent against it.
 """
 
 
