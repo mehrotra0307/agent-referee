@@ -35,6 +35,13 @@ def init_project(
     provider: str,
     target_dir: str = ".",
 ) -> Path:
+    """Scaffold a referee.yaml with sensible guardrail defaults, and make
+    sure .env is gitignored. Called by `referee init`; never touches or
+    asks for an API key value itself, only prints which env var to set.
+
+    Returns:
+        The path to the referee.yaml file just written.
+    """
     if provider not in _PROVIDER_ENV_VARS:
         raise ValueError(f"Unknown provider '{provider}' — expected one of {sorted(_PROVIDER_ENV_VARS)}")
 
@@ -82,6 +89,7 @@ def init_project(
 
 
 def _ensure_gitignore_has_env(target: Path) -> None:
+    """Append a .env line to .gitignore (creating the file if needed), unless it's already there."""
     gitignore_path = target / ".gitignore"
     existing = gitignore_path.read_text() if gitignore_path.exists() else ""
 

@@ -5,6 +5,11 @@ from typing import Callable
 
 
 def load_entry_point(entry_point: str) -> Callable[[str], str]:
+    """Resolve a "path/to/file.py:function_name" string (referee.yaml's
+    agent.entry_point) into the actual callable, without requiring the
+    user's project to be an installed package. Adds the target file's own
+    directory to sys.path first, so its own local imports still work.
+    """
     if ":" not in entry_point:
         raise ValueError(
             f"entry_point '{entry_point}' isn't in the expected 'path/to/file.py:function_name' shape."

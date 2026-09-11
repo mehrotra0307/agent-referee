@@ -12,6 +12,8 @@ _configured_exporter = None
 
 
 def _build_span_processor(observe_config: dict[str, Any]):
+    """Build the OTel span processor for observe_config["exporter"]
+    ('console', the zero-config default, or 'otlp')."""
     exporter_name = observe_config.get("exporter", "console")
 
     if exporter_name == "console":
@@ -40,6 +42,9 @@ def _build_span_processor(observe_config: dict[str, Any]):
 
 
 def get_tracer(config: dict[str, Any], agent_name: str = "agent-referee"):
+    """Get (or lazily build and cache) the process-wide tracer for config's
+    observe.* section. Rebuilds only if the exporter type actually changed
+    since the last call, so this is cheap to call on every request."""
     global _tracer, _configured_exporter
 
     observe_config = config.get("observe", {"exporter": "console"})
@@ -58,6 +63,7 @@ def get_tracer(config: dict[str, Any], agent_name: str = "agent-referee"):
 
 
 def reset_tracer() -> None:
+    """Drop the cached tracer so the next get_tracer() call rebuilds it. Mainly for tests."""
     global _tracer, _configured_exporter
     _tracer = None
     _configured_exporter = None

@@ -12,6 +12,12 @@ class ConfigError(ValueError):
 
 
 def load_config(path: str = "referee.yaml") -> dict[str, Any]:
+    """Load and validate a referee.yaml file, then load the local .env file
+    (via python-dotenv) so API keys read with os.getenv() are available.
+
+    Raises:
+        ConfigError: if the file is missing, or missing a required section.
+    """
     config_path = Path(path)
     if not config_path.exists():
         raise ConfigError(
@@ -34,4 +40,5 @@ def load_config(path: str = "referee.yaml") -> dict[str, Any]:
 
 
 def get_provider_config(config: dict[str, Any]) -> dict[str, Any]:
+    """Pull out the llm_provider.* section, passed to referee/providers.py's call_llm()."""
     return config.get("llm_provider", {})

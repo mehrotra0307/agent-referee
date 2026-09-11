@@ -1,3 +1,7 @@
+"""Provider-agnostic LLM calls, shared by the LLM-judge evaluator and the
+scope-check guardrail. Each SDK is imported lazily inside its own _call_*
+function so installing agent-referee never requires all three."""
+
 import os
 from typing import Any
 
@@ -85,6 +89,10 @@ _DISPATCH = {
 
 
 def call_llm(prompt: str, provider_config: dict[str, Any]) -> str:
+    """Send prompt to whichever provider provider_config["name"] names
+    (from referee.yaml's llm_provider section), using provider_config["model"]
+    if set, else a sensible per-provider default. Returns the raw text reply.
+    """
     provider_name = provider_config["name"]
     if provider_name not in _DISPATCH:
         raise ValueError(

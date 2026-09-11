@@ -30,6 +30,9 @@ Full explanation: docs/how-it-works.md
 
 
 def _maybe_print_intro() -> None:
+    """Print the one-time "what's a span" explanation, on the first real
+    call only. State is a dotfile, not an in-memory flag, so a long-running
+    agent process restarting doesn't show it again."""
     if _INTRO_SEEN_FILE.exists():
         return
     print(_INTRO_TEXT)
@@ -38,6 +41,28 @@ def _maybe_print_intro() -> None:
 
 
 def protect(config: Union[str, dict] = "referee.yaml") -> Callable:
+    """The library's main entry point: wraps a plain str -> str agent
+    function with automatic tracing and guardrails.
+
+    Usage:
+        @referee.protect(config="referee.yaml")
+        def my_agent(user_input: str) -> str:
+            ...
+
+    config may be a path to a referee.yaml file, or an already-loaded config
+    dict (used by `referee demo` and by tests, since they have no file on disk).
+
+    On every call, in order: start a trace span, run input guardrails
+    (blocking here skips your function entirely), call your function, run
+    output guardrails, end the span. The wrapped function also accepts an
+    optional session_id keyword argument for per-user rate limiting and
+    tool-call limits; without one, all calls in this process share a single
+    generated session ID.
+
+    Does NOT cover execution-layer (tool-call) guardrails — see
+    referee/guardrails/execution_layer.py for why that's a manual, one-line
+    call instead.
+    """
     loaded_config = config if isinstance(config, dict) else load_config(config)
     provider_config = get_provider_config(loaded_config)
     tracer = get_tracer(loaded_config)

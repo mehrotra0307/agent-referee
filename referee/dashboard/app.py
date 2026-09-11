@@ -1,3 +1,11 @@
+"""Local Streamlit dashboard, launched by `referee dashboard`.
+
+Reads only local files: ./reports/*.json and ./referee.yaml. Nothing here
+is hosted by us, matching the local-first design principle. Run directly
+with `streamlit run referee/dashboard/app.py` from a project directory
+that has at least one report in ./reports.
+"""
+
 import json
 from pathlib import Path
 from urllib.parse import urlparse
@@ -9,6 +17,7 @@ st.set_page_config(page_title="Agent Referee Dashboard", page_icon="🧑‍⚖�
 
 
 def _latest_report(pattern: str):
+    """Return (parsed_json, filename) for the most recent reports/<pattern> file, or None."""
     reports_dir = Path("reports")
     if not reports_dir.exists():
         return None
@@ -19,6 +28,7 @@ def _latest_report(pattern: str):
 
 
 def _load_referee_config():
+    """Load ./referee.yaml if present, else {} (the dashboard still works without it)."""
     config_path = Path("referee.yaml")
     if not config_path.exists():
         return {}
