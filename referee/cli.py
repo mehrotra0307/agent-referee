@@ -47,6 +47,22 @@ This wizard runs fully offline — no API key, no network call, nothing sent
 anywhere. Let's build yours, one question at a time.
 """
 
+_EVAL_RUN_INTRO = """
+An evaluation is a report card. It asks your agent every question in your golden
+dataset, checks each real answer against what you said a correct one should
+mention, and tells you what passed and what failed, in plain English, one
+sentence at a time. Nothing here changes your agent — it only grades it.
+"""
+
+_GUARDRAILS_TEST_INTRO = """
+A guardrail is a bouncer, not a grader. It doesn't care if an answer is good —
+it cares whether a message is safe enough to let through at all. This command
+throws a small set of real attack attempts (fake emails, prompt-injection
+phrases, off-topic questions) at your setup and tells you which ones actually
+got blocked. Never seen the word "guardrail" before today? This is the
+fastest way to actually understand what one does.
+"""
+
 
 @click.group()
 @click.version_option()
@@ -130,6 +146,7 @@ def eval_group():
 @click.option("--config", default="referee.yaml", show_default=True)
 def eval_run(config: str):
     """Run your golden dataset against your agent and print a report. CI-ready."""
+    click.echo(_EVAL_RUN_INTRO)
     cfg = load_config(config)
     agent_cfg = cfg["agent"]
     dataset_path = cfg.get("eval", {}).get("dataset", "golden_dataset.json")
@@ -175,10 +192,22 @@ def guardrails_group():
 )
 def guardrails_test(config: str, local_only: bool):
     """Run packaged adversarial attacks against your configured guardrails."""
-    cfg = load_config(config)
-    input_cfg = cfg.get("guardrails", {}).get("input", {})
-    scope_cfg = input_cfg.get("scope_check", {})
-    provider_config = get_provider_config(cfg)
+    click.echo(_GUARDRAILS_TEST_INTRO)
+
+    scope_cfg = {}
+    provider_config = {}
+    if Path(config).exists():
+        cfg = load_config(config)
+        input_cfg = cfg.get("guardrails", {}).get("input", {})
+        scope_cfg = input_cfg.get("scope_check", {})
+        provider_config = get_provider_config(cfg)
+    else:
+        click.echo(
+            f"No {config} found — that's fine, this command doesn't need one. Running the free, "
+            "local checks (PII and prompt-injection) only. Run `referee init` first if you also "
+            "want to test the on-topic scope check.\n"
+        )
+        local_only = True
 
     click.echo("Running packaged adversarial guardrail tests...\n")
 
