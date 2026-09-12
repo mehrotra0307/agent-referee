@@ -1,10 +1,20 @@
 import json
 import subprocess
 import sys
+import time
+import warnings
 from datetime import datetime
 from pathlib import Path
 
 import click
+
+# Silences two specific, harmless warnings that fire the instant a provider
+# SDK is imported on an older Python/OpenSSL setup (Python's own EOL notice
+# via google-auth, and urllib3's LibreSSL notice) — not anything Agent
+# Referee itself did wrong, just noise that makes a first-run demo look
+# broken. Deliberately narrow: this doesn't touch any other warning.
+warnings.filterwarnings("ignore", message=".*end of life.*")
+warnings.filterwarnings("ignore", message=".*OpenSSL.*")
 
 from referee.config import get_provider_config, load_config
 from referee.entry_point import load_entry_point
@@ -272,37 +282,92 @@ def guardrails_test(config: str, local_only: bool):
         raise SystemExit(1)
 
 
+def _type_out(text: str, delay: float = 0.018) -> None:
+    for char in text:
+        sys.stdout.write(char)
+        sys.stdout.flush()
+        time.sleep(delay)
+    sys.stdout.write("\n")
+
+
+def _pause(seconds: float) -> None:
+    time.sleep(seconds)
+
+
+def _scene_header(title: str) -> None:
+    click.echo()
+    click.echo(click.style("─" * 58, dim=True))
+    click.echo(click.style(title, bold=True))
+    click.echo(click.style("─" * 58, dim=True))
+    click.echo()
+
+
 @main.command()
 def demo():
-    """Zero-config, zero-API-key demo: eval + guardrails + tracing in ~30 seconds."""
+    """Zero-config, zero-API-key demo: eval + guardrails + tracing, live."""
     click.echo(
         "Agent Referee demo — no config file, no API key, nothing installed beyond this "
-        "package. This wraps a tiny built-in mock agent so you can see the full loop before "
-        "touching your own agent.\n"
+        "package.\n"
     )
+    _pause(0.4)
+    click.echo(
+        "Meet the demo agent: a pretend pizza-shop assistant, built into this package just "
+        "for this walkthrough. It's not a real AI, just a few lines of if/else — the point "
+        "isn't the agent, it's watching Agent Referee work around it. Three short scenes:\n"
+    )
+    _pause(0.8)
 
     protected_agent = protect(config=_DEMO_CONFIG)(_demo_agent)
 
-    click.echo("1. A normal question passes straight through, guardrails and tracing running silently:\n")
-    click.echo(f"   > {protected_agent('What time do you close?')}\n")
+    _scene_header("SCENE 1 — A normal question")
+    click.echo("A customer types a question. Watch it go in, and come back out the other side:\n")
+    _pause(0.3)
+    click.echo(click.style("customer> ", fg="cyan"), nl=False)
+    _type_out("What time do you close?")
+    _pause(0.4)
+    click.echo("\n(behind the scenes, this is the real trace, printed live as it happens:)\n")
+    response = protected_agent("What time do you close?")
+    _pause(0.2)
+    click.echo()
+    click.echo(click.style("agent> ", fg="green") + response)
+    _pause(1.0)
 
-    click.echo("2. A message containing PII gets caught by the input guardrail BEFORE the agent ever runs:\n")
-    click.echo(f"   > {protected_agent('call me back at 9876543210 please')}\n")
+    _scene_header("SCENE 2 — Someone pastes personal info by accident")
+    click.echo("Same agent, but this time the message itself is the problem:\n")
+    _pause(0.3)
+    click.echo(click.style("customer> ", fg="cyan"), nl=False)
+    _type_out("call me back at 9876543210 please")
+    _pause(0.4)
+    click.echo("\n(the input guardrail catches this BEFORE the agent function ever runs:)\n")
+    response = protected_agent("call me back at 9876543210 please")
+    _pause(0.2)
+    click.echo()
+    click.echo(click.style("agent> ", fg="yellow") + response)
+    _pause(1.0)
 
-    click.echo("3. A tiny evaluation, scoring the agent's real answer against what it must mention:\n")
+    _scene_header("SCENE 3 — Grading the answer from Scene 1")
+    click.echo(
+        "A golden dataset says a correct answer to 'What time do you close?' must mention "
+        "'11 AM' or '11 PM'. Checking the real answer from Scene 1 against that:\n"
+    )
+    _pause(0.5)
     eval_case = {
         "id": "demo_eval_001",
         "check": "contains_any",
         "expected_contains": ["11 AM", "11 PM"],
     }
     eval_result = check_deterministic(eval_case, _demo_agent("What time do you close?"))
-    status = "PASS" if eval_result["passed"] else "FAIL"
-    click.echo(f"   [{status}] {eval_result['reason']}\n")
+    status_color = "green" if eval_result["passed"] else "red"
+    click.echo(click.style(f"[{'PASS' if eval_result['passed'] else 'FAIL'}] ", fg=status_color, bold=True) + eval_result["reason"])
+    _pause(0.6)
 
+    click.echo()
+    click.echo(click.style("─" * 58, dim=True))
     click.echo(
-        "That's the whole loop: a guardrail blocking bad input before it ever reaches your "
-        "agent, a trace recording every step above, and an evaluator scoring the answer — all "
-        "with zero setup.\n\nNext: run `referee init` to wire this into your real agent."
+        "\nThat's the whole loop: a guardrail blocking bad input before it reaches your agent "
+        "(Scene 2), a trace recording every step as it happens (Scene 1), and an evaluator "
+        "grading the answer afterward (Scene 3). Zero setup, zero API key, all three pillars.\n"
+        "\nNext: run `referee init` to wire this into your real agent."
     )
 
 

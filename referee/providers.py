@@ -1,13 +1,15 @@
 """Provider-agnostic LLM calls, shared by the LLM-judge evaluator and the
 scope-check guardrail. All three SDKs ship in core (see pyproject.toml for
-why) so this file can import them plainly, no lazy-import dance needed."""
+why), but are still imported lazily inside each _call_* function rather
+than at module load time: importing google-genai in particular drags in
+google-auth, which prints noisy environment warnings (Python version,
+OpenSSL version) the instant it's imported — before anyone has actually
+asked to call an LLM. `referee demo`, for example, never needs a real
+provider call at all, and shouldn't pay that cost just because
+`import referee` happened."""
 
 import os
 from typing import Any
-
-from anthropic import Anthropic
-from google import genai
-from openai import OpenAI
 
 _DEFAULT_MODELS = {
     "gemini": "gemini-3.1-flash-lite",
@@ -37,12 +39,16 @@ def _get_api_key(provider_name: str) -> str:
 
 
 def _call_gemini(prompt: str, model: str) -> str:
+    from google import genai
+
     client = genai.Client(api_key=_get_api_key("gemini"))
     response = client.models.generate_content(model=model, contents=prompt)
     return response.text
 
 
 def _call_openai(prompt: str, model: str) -> str:
+    from openai import OpenAI
+
     client = OpenAI(api_key=_get_api_key("openai"))
     response = client.chat.completions.create(
         model=model,
@@ -52,6 +58,8 @@ def _call_openai(prompt: str, model: str) -> str:
 
 
 def _call_anthropic(prompt: str, model: str) -> str:
+    from anthropic import Anthropic
+
     client = Anthropic(api_key=_get_api_key("anthropic"))
     response = client.messages.create(
         model=model,
