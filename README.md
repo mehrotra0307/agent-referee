@@ -263,25 +263,6 @@ Works with plain Python + Gemini/OpenAI/Anthropic, LangGraph, CrewAI, and Google
 as complete working files in [examples/](examples/), not snippets. Agent Referee itself never
 imports any of those frameworks, so it keeps working with whatever shows up next year too.
 
-## Testing this yourself, right now, before you install it for real
-
-You don't need PyPI to try this. You don't need a new terminal, either, the one you're already
-in is fine. Clone it and run it straight from source:
-
-```bash
-git clone https://github.com/mehrotra0307/agent-referee.git
-cd agent-referee
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e .
-referee demo
-```
-
-That `-e` means "editable." Python runs the code straight from this folder, so if you go edit
-something in `referee/`, your very next `referee` command uses the change immediately, no
-reinstalling. Once `referee demo` works, walk through Steps 2 onward above against a real toy
-agent of your own before trusting it with anything that matters.
-
 ## Optional extras, and why they're optional
 
 ```bash
@@ -297,31 +278,12 @@ case worth a second command. `sentence-transformers` and `streamlit` are each 3-
 that combined, for features the guided flow above doesn't even touch by default. Weight only
 where weight is earned.
 
-## Publishing, versions, and "do I have to redo everything"
-
-Short answer: yes, a little, and it's normal. Pushing to GitHub and publishing to PyPI are two
-separate things. `pip install agent-referee` only ever sees what's been explicitly published to
-PyPI, so a change sitting on GitHub doesn't reach anyone who already ran `pip install` until a
-new version gets built and uploaded. That's not a flaw, it's how every Python package works,
-including ones with a hundred million downloads. Bump the version number, `python -m build`,
-`twine upload`, done. A minute of ceremony per release, not a redesign.
-
 ## Want the deeper explanation
 
 - [docs/how-it-works.md](docs/how-it-works.md): the three pillars again, slower, for someone
   who's never heard these words before today.
 - [docs/your-first-dataset.md](docs/your-first-dataset.md): a full worked example of building a
   golden dataset by hand.
-
-## What this is not
-
-Being honest about scope, grandma-style: this is not a hosted service, there's nothing to sign
-into and nothing that can go down on our end because there's no "our end." It's not a
-replacement for something like Langfuse or Datadog if you need enterprise-scale trace storage
-across a whole company, point it at one of those as an OTLP backend instead. It's not a
-fine-tuned safety classifier, the guardrails here are the same free, tiered approach
-(regex → embeddings → LLM call) that real teams actually start with before reaching for
-anything fancier. And it will never, ever ask for your API key.
 
 ## Contributing
 
@@ -331,3 +293,9 @@ Typos, new examples, new guardrail checks, doc fixes, all welcome. See
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+---
+
+Go forth and plug this into whatever you built. If your agent was already flawless and
+guardrail-proof before reading this, congratulations, you didn't need us and this was a fun
+five minutes. Everyone else: you're welcome.
