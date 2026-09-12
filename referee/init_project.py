@@ -2,47 +2,13 @@ from pathlib import Path
 
 import yaml
 
+from referee.ui import divider, next_steps
+
 _PROVIDER_ENV_VARS = {
     "gemini": "GEMINI_API_KEY",
     "openai": "OPENAI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
 }
-
-_WHAT_WAS_CREATED = """
-Here's what was just created, and why:
-
-  referee.yaml
-    Your project's configuration — which agent to test, which LLM provider
-    to use for the checks that need one, and which guardrails are on.
-    Nothing secret lives in this file; it's meant to be committed to git.
-
-  .gitignore entry for .env
-    Your API key belongs in a local .env file that never gets committed.
-    Agent Referee reads it the same way the official Google/OpenAI/Anthropic
-    SDKs do — os.getenv() — and never asks you to paste it anywhere.
-
-What to do next, in order:
-
-  1. Create a .env file in this directory and add:
-
-       {env_var}=your_key_here
-
-  2. Add one decorator above your agent's function:
-
-       import referee
-
-       @referee.protect(config="referee.yaml")
-       def my_agent(user_input: str) -> str:
-           ...
-
-  3. Run your agent once, by hand, with any question. Before you build a whole
-     dataset, just check you can actually see the guardrail and trace output
-     printed underneath the answer. If you see that, it's wired up correctly
-     and you're ready for the next step.
-
-  4. Then run `referee dataset new` to build your first test list, and
-     `referee eval run` to grade your agent against it.
-"""
 
 
 def init_project(
@@ -99,7 +65,34 @@ def init_project(
 
     _ensure_gitignore_has_env(target)
 
-    print(_WHAT_WAS_CREATED.format(env_var=_PROVIDER_ENV_VARS[provider]))
+    env_var = _PROVIDER_ENV_VARS[provider]
+
+    divider("DONE — here's what just happened", color="green")
+    print(
+        "Created referee.yaml\n"
+        "  Your project's settings: which agent to test, which AI company to use for the\n"
+        "  checks that need one, and which guardrails are on. Nothing secret lives in this\n"
+        "  file, it's meant to be committed to git.\n"
+    )
+    print(
+        "Updated .gitignore\n"
+        "  Your API key belongs in a local .env file that never gets committed. Agent Referee\n"
+        "  reads it the same way the official Google/OpenAI/Anthropic SDKs do, with\n"
+        "  os.getenv(), and never asks you to paste it anywhere.\n"
+    )
+
+    next_steps(
+        f"  1. Create a .env file in this directory and add:\n\n       {env_var}=your_key_here\n",
+        "  2. Add one decorator above your agent's function:\n\n"
+        "       import referee\n\n"
+        "       @referee.protect(config=\"referee.yaml\")\n"
+        "       def my_agent(user_input: str) -> str:\n"
+        "           ...\n",
+        "  3. Run your agent once, by hand, with any question. Before building a whole\n"
+        "     dataset, just check you can see the guardrail and trace output printed\n"
+        "     underneath the answer. That's confirmation it's wired up correctly.\n",
+        "  4. Then run: referee dataset new",
+    )
 
     return config_path
 

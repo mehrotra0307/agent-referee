@@ -1,7 +1,6 @@
 import json
 import subprocess
 import sys
-import time
 import warnings
 from datetime import datetime
 from pathlib import Path
@@ -25,6 +24,7 @@ from referee.guardrails.scope_check import check_scope
 from referee.guardrails.test_suite import ADVERSARIAL_TEST_CASES
 from referee.init_project import init_project
 from referee.protect import protect
+from referee.ui import divider, next_steps, pause, type_out
 
 _PROVIDERS = ["gemini", "openai", "anthropic"]
 
@@ -81,15 +81,46 @@ def main():
 
 
 @main.command()
-@click.option("--entry-point", prompt="Your agent's entry point (e.g. agent/my_agent.py:ask_my_agent)")
-@click.option("--description", prompt="One-line description of what your agent is allowed to talk about")
-@click.option(
-    "--provider",
-    prompt=f"Which LLM provider will you use for the checks that need one? ({'/'.join(_PROVIDERS)})",
-    type=click.Choice(_PROVIDERS),
-)
+@click.option("--entry-point", default=None, help="Skip the interactive question with this value.")
+@click.option("--description", default=None, help="Skip the interactive question with this value.")
+@click.option("--provider", default=None, type=click.Choice(_PROVIDERS), help="Skip the interactive question with this value.")
 def init(entry_point: str, description: str, provider: str):
     """Scaffold referee.yaml for this project. Never asks for an API key."""
+    click.echo("\nLet's get your agent connected. Three quick questions, no API key involved, ever.")
+
+    if entry_point is None:
+        divider("QUESTION 1 of 3 — Where does your agent live?")
+        click.echo(
+            "However you built your agent, a plain API call, CrewAI, LangGraph, Google's ADK,\n"
+            "anything at all, somewhere in your code there's ONE function that takes a question\n"
+            "in and returns an answer out. That's what we need to find: which file it's in, and\n"
+            "what that function is called.\n"
+        )
+        click.echo("Format:  path/to/file.py:function_name\n")
+        click.echo(
+            "Example: say you have a file called my_agent.py, right here in this same folder,\n"
+            "with a function in it called ask. You'd type:  my_agent.py:ask\n"
+        )
+        entry_point = click.prompt("Your answer")
+
+    if description is None:
+        divider("QUESTION 2 of 3 — What is your agent allowed to talk about?")
+        click.echo(
+            "One sentence, plain English. This gets used later to catch questions that are\n"
+            "completely off-topic, like someone asking your pizza-shop bot for tax advice.\n"
+        )
+        click.echo('Example:  "Only answer questions about a pizza shop\'s menu, hours, and delivery"\n')
+        description = click.prompt("Your answer")
+
+    if provider is None:
+        divider("QUESTION 3 of 3 — Which AI company's API do you use?")
+        click.echo(
+            "This is only used for the one or two checks that need to ask an AI a question of\n"
+            "its own, like \"does this answer sound toxic?\" Pick whichever matches an API key\n"
+            "you already have, or plan to get.\n"
+        )
+        provider = click.prompt("Your answer", type=click.Choice(_PROVIDERS))
+
     init_project(entry_point=entry_point, description=description, provider=provider)
 
 
@@ -282,26 +313,6 @@ def guardrails_test(config: str, local_only: bool):
         raise SystemExit(1)
 
 
-def _type_out(text: str, delay: float = 0.018) -> None:
-    for char in text:
-        sys.stdout.write(char)
-        sys.stdout.flush()
-        time.sleep(delay)
-    sys.stdout.write("\n")
-
-
-def _pause(seconds: float) -> None:
-    time.sleep(seconds)
-
-
-def _scene_header(title: str) -> None:
-    click.echo()
-    click.echo(click.style("─" * 58, dim=True))
-    click.echo(click.style(title, bold=True))
-    click.echo(click.style("─" * 58, dim=True))
-    click.echo()
-
-
 @main.command()
 def demo():
     """Zero-config, zero-API-key demo: eval + guardrails + tracing, live."""
@@ -309,48 +320,48 @@ def demo():
         "Agent Referee demo — no config file, no API key, nothing installed beyond this "
         "package.\n"
     )
-    _pause(0.4)
+    pause(0.4)
     click.echo(
         "Meet the demo agent: a pretend pizza-shop assistant, built into this package just "
         "for this walkthrough. It's not a real AI, just a few lines of if/else — the point "
         "isn't the agent, it's watching Agent Referee work around it. Three short scenes:\n"
     )
-    _pause(0.8)
+    pause(0.8)
 
     protected_agent = protect(config=_DEMO_CONFIG)(_demo_agent)
 
-    _scene_header("SCENE 1 — A normal question")
+    divider("SCENE 1 — A normal question")
     click.echo("A customer types a question. Watch it go in, and come back out the other side:\n")
-    _pause(0.3)
+    pause(0.3)
     click.echo(click.style("customer> ", fg="cyan"), nl=False)
-    _type_out("What time do you close?")
-    _pause(0.4)
+    type_out("What time do you close?")
+    pause(0.4)
     click.echo("\n(behind the scenes, this is the real trace, printed live as it happens:)\n")
     response = protected_agent("What time do you close?")
-    _pause(0.2)
+    pause(0.2)
     click.echo()
     click.echo(click.style("agent> ", fg="green") + response)
-    _pause(1.0)
+    pause(1.0)
 
-    _scene_header("SCENE 2 — Someone pastes personal info by accident")
+    divider("SCENE 2 — Someone pastes personal info by accident")
     click.echo("Same agent, but this time the message itself is the problem:\n")
-    _pause(0.3)
+    pause(0.3)
     click.echo(click.style("customer> ", fg="cyan"), nl=False)
-    _type_out("call me back at 9876543210 please")
-    _pause(0.4)
+    type_out("call me back at 9876543210 please")
+    pause(0.4)
     click.echo("\n(the input guardrail catches this BEFORE the agent function ever runs:)\n")
     response = protected_agent("call me back at 9876543210 please")
-    _pause(0.2)
+    pause(0.2)
     click.echo()
     click.echo(click.style("agent> ", fg="yellow") + response)
-    _pause(1.0)
+    pause(1.0)
 
-    _scene_header("SCENE 3 — Grading the answer from Scene 1")
+    divider("SCENE 3 — Grading the answer from Scene 1")
     click.echo(
         "A golden dataset says a correct answer to 'What time do you close?' must mention "
         "'11 AM' or '11 PM'. Checking the real answer from Scene 1 against that:\n"
     )
-    _pause(0.5)
+    pause(0.5)
     eval_case = {
         "id": "demo_eval_001",
         "check": "contains_any",
@@ -359,16 +370,16 @@ def demo():
     eval_result = check_deterministic(eval_case, _demo_agent("What time do you close?"))
     status_color = "green" if eval_result["passed"] else "red"
     click.echo(click.style(f"[{'PASS' if eval_result['passed'] else 'FAIL'}] ", fg=status_color, bold=True) + eval_result["reason"])
-    _pause(0.6)
+    pause(0.6)
 
     click.echo()
     click.echo(click.style("─" * 58, dim=True))
     click.echo(
         "\nThat's the whole loop: a guardrail blocking bad input before it reaches your agent "
         "(Scene 2), a trace recording every step as it happens (Scene 1), and an evaluator "
-        "grading the answer afterward (Scene 3). Zero setup, zero API key, all three pillars.\n"
-        "\nNext: run `referee init` to wire this into your real agent."
+        "grading the answer afterward (Scene 3). Zero setup, zero API key, all three pillars."
     )
+    next_steps("referee init   — wire this into your real agent")
 
 
 @main.command()
