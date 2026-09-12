@@ -80,46 +80,106 @@ def main():
     """Agent Referee — evaluation, guardrails, and observability for any AI agent."""
 
 
+_PROVIDER_CHOICES = ["gemini", "openai", "anthropic", "none"]
+
+_NO_KEY_YET_MESSAGE = (
+    "\nTotally fine, most people start here. Fastest free option: go to "
+    "https://aistudio.google.com, sign in with any Google account, and click "
+    "\"Get API key.\" No credit card, no waiting. Once you've got a key for one of\n"
+    "the three above (or decide you'd rather use OpenAI or Anthropic), come back "
+    "and answer again.\n"
+)
+
+
+def _ask_entry_point() -> str:
+    divider("QUESTION 1 of 3 — Where does your agent live?")
+    click.echo(
+        "However you built your agent, a plain API call, CrewAI, LangGraph, Google's ADK,\n"
+        "or anything else, somewhere in your code there is exactly ONE function that takes a\n"
+        "question in (as a string) and hands an answer back out (also a string). We're not\n"
+        "asking about your whole project, just that one function: which file it's in, and\n"
+        "what it's called.\n"
+    )
+    click.echo(
+        "Format:  path/to/file.py:function_name\n"
+        "         (the part before the colon is the file, the part after is the function)\n"
+    )
+    click.echo(
+        "Example: say you have a file called my_agent.py, sitting right here in this same\n"
+        "folder, and inside it there's a function called ask. You'd type exactly this:\n\n"
+        "    my_agent.py:ask\n"
+    )
+
+    while True:
+        entry_point = click.prompt("Your answer")
+        file_part = entry_point.split(":", 1)[0] if ":" in entry_point else entry_point
+        if ":" not in entry_point:
+            click.echo(
+                f"\nThat's missing the ':function_name' part — we got '{entry_point}' but need "
+                "something like my_agent.py:ask. Try again.\n"
+            )
+            continue
+        if not Path(file_part).exists():
+            click.echo(
+                f"\nCan't find a file at '{file_part}' from here. Typo, or is it in a different "
+                "folder? Try again (or Ctrl+C to quit and double check).\n"
+            )
+            continue
+        return entry_point
+
+
+def _ask_description() -> str:
+    divider("QUESTION 2 of 3 — What is your agent allowed to talk about?")
+    click.echo(
+        "Picture a small pizza shop's support bot. Its whole job is menu, hours, and\n"
+        "delivery questions, nothing else. If a customer asked it \"should I file my taxes as\n"
+        "self-employed?\", that's wildly outside its job, and this question is exactly how we\n"
+        "teach Agent Referee to recognize and block things like that for YOUR agent.\n"
+    )
+    click.echo(
+        "So: one sentence, plain English, describing what your agent's job actually is.\n"
+        "For that pizza shop example above, the literal answer would be:\n\n"
+        "    Only answer questions about a pizza shop's menu, hours, and delivery\n"
+    )
+    return click.prompt("Your answer")
+
+
+def _ask_provider() -> str:
+    divider("QUESTION 3 of 3 — Which AI company's API do you use?")
+    click.echo(
+        click.style("Before anything else: ", bold=True)
+        + "this question wants a COMPANY NAME, not a password. Nobody here is fishing "
+        "for your key, we promise, we don't even have a form to put it in.\n"
+    )
+    click.echo("Pick whichever matches an API key you already have, or plan to get:\n")
+    click.echo("  gemini      Google's models (what powers Gemini / Google AI Studio)")
+    click.echo("  openai      the company behind ChatGPT")
+    click.echo("  anthropic   the company behind Claude")
+    click.echo("  none        I don't have any of these yet\n")
+
+    provider = click.prompt("Your answer", type=click.Choice(_PROVIDER_CHOICES, case_sensitive=False)).lower()
+    while provider == "none":
+        click.echo(_NO_KEY_YET_MESSAGE)
+        provider = click.prompt("Your answer", type=click.Choice(_PROVIDER_CHOICES, case_sensitive=False)).lower()
+    return provider
+
+
 @main.command()
 @click.option("--entry-point", default=None, help="Skip the interactive question with this value.")
 @click.option("--description", default=None, help="Skip the interactive question with this value.")
-@click.option("--provider", default=None, type=click.Choice(_PROVIDERS), help="Skip the interactive question with this value.")
+@click.option("--provider", default=None, type=click.Choice(_PROVIDERS, case_sensitive=False), help="Skip the interactive question with this value.")
 def init(entry_point: str, description: str, provider: str):
     """Scaffold referee.yaml for this project. Never asks for an API key."""
     click.echo("\nLet's get your agent connected. Three quick questions, no API key involved, ever.")
 
     if entry_point is None:
-        divider("QUESTION 1 of 3 — Where does your agent live?")
-        click.echo(
-            "However you built your agent, a plain API call, CrewAI, LangGraph, Google's ADK,\n"
-            "anything at all, somewhere in your code there's ONE function that takes a question\n"
-            "in and returns an answer out. That's what we need to find: which file it's in, and\n"
-            "what that function is called.\n"
-        )
-        click.echo("Format:  path/to/file.py:function_name\n")
-        click.echo(
-            "Example: say you have a file called my_agent.py, right here in this same folder,\n"
-            "with a function in it called ask. You'd type:  my_agent.py:ask\n"
-        )
-        entry_point = click.prompt("Your answer")
-
+        entry_point = _ask_entry_point()
     if description is None:
-        divider("QUESTION 2 of 3 — What is your agent allowed to talk about?")
-        click.echo(
-            "One sentence, plain English. This gets used later to catch questions that are\n"
-            "completely off-topic, like someone asking your pizza-shop bot for tax advice.\n"
-        )
-        click.echo('Example:  "Only answer questions about a pizza shop\'s menu, hours, and delivery"\n')
-        description = click.prompt("Your answer")
-
+        description = _ask_description()
     if provider is None:
-        divider("QUESTION 3 of 3 — Which AI company's API do you use?")
-        click.echo(
-            "This is only used for the one or two checks that need to ask an AI a question of\n"
-            "its own, like \"does this answer sound toxic?\" Pick whichever matches an API key\n"
-            "you already have, or plan to get.\n"
-        )
-        provider = click.prompt("Your answer", type=click.Choice(_PROVIDERS))
+        provider = _ask_provider()
+    else:
+        provider = provider.lower()
 
     init_project(entry_point=entry_point, description=description, provider=provider)
 
@@ -176,6 +236,26 @@ def dataset_new(output: str):
     }
     Path(output).write_text(json.dumps(dataset, indent=2) + "\n")
     click.echo(f"\nWrote {len(entries)} test case(s) to {output}. Run `referee eval run` next.")
+
+
+@main.command(name="try")
+@click.argument("question")
+@click.option("--config", default="referee.yaml", show_default=True)
+def try_once(question: str, config: str):
+    """Call your real agent once with QUESTION and print what comes back.
+
+    This is the quickest way to check the decorator is actually wired up:
+    it loads your agent from referee.yaml's entry_point (whatever framework
+    it's built with) and calls it exactly once, right here in this
+    terminal. If you see guardrail and trace lines printed above the
+    answer, it's working.
+    """
+    cfg = load_config(config)
+    agent_fn = load_entry_point(cfg["agent"]["entry_point"])
+
+    click.echo(f"\nCalling your agent with: {question!r}\n")
+    response = agent_fn(question)
+    click.echo(f"\nAgent's answer: {response}\n")
 
 
 @main.group(name="eval")

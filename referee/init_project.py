@@ -10,20 +10,7 @@ _PROVIDER_ENV_VARS = {
     "anthropic": "ANTHROPIC_API_KEY",
 }
 
-_PROVIDER_KEY_HELP = {
-    "gemini": (
-        "Go to https://aistudio.google.com, sign in with any Google account, and click "
-        "\"Get API key.\" Free, no credit card needed."
-    ),
-    "openai": (
-        "Go to https://platform.openai.com/api-keys and create a new secret key. Needs "
-        "billing set up first; there's no free tier."
-    ),
-    "anthropic": (
-        "Go to https://console.anthropic.com and create a key under API Keys. Needs "
-        "billing set up first; there's no free tier."
-    ),
-}
+_EXAMPLES_URL = "https://github.com/mehrotra0307/agent-referee/tree/main/examples"
 
 
 def init_project(
@@ -81,7 +68,6 @@ def init_project(
     _ensure_gitignore_has_env(target)
 
     env_var = _PROVIDER_ENV_VARS[provider]
-    key_help = _PROVIDER_KEY_HELP[provider]
 
     if ":" in entry_point:
         file_hint, function_hint = entry_point.rsplit(":", 1)
@@ -91,42 +77,52 @@ def init_project(
     divider("DONE — here's what just happened", color="green")
     print(
         "Created referee.yaml\n"
-        "  Your project's settings: which agent to test, which AI company to use for the\n"
-        "  checks that need one, and which guardrails are on. Nothing secret lives in this\n"
-        "  file, it's meant to be committed to git.\n"
+        "  A plain text settings file, sitting right here in this folder. It's just your\n"
+        "  three answers above, nothing else, and nothing secret. Curious what's actually in\n"
+        "  it? Run: cat referee.yaml\n"
     )
     print(
         "Updated .gitignore\n"
-        "  Your API key belongs in a local .env file that never gets committed. Agent Referee\n"
-        "  reads it the same way the official Google/OpenAI/Anthropic SDKs do, with\n"
-        "  os.getenv(), and never asks you to paste it anywhere.\n"
+        "  Quick primer if you haven't hit this before: .gitignore is a file git (the tool\n"
+        "  that tracks your code's history) reads to decide what to NEVER track or upload.\n"
+        "  We added exactly one line to it: .env\n\n"
+        "  To be extremely clear about this: Agent Referee has not read, received, or stored\n"
+        "  any API key from you. There isn't one yet, you haven't created your .env file at\n"
+        "  this point. This step is purely defensive, so that whenever you DO add a real key\n"
+        "  later, git can never accidentally upload it.\n"
     )
 
     next_steps(
-        "  1. If you don't already have an API key:\n\n"
-        f"       {key_help}\n",
-        "  2. Save that key in a .env file, right here in this folder:\n\n"
+        f"  1. Save your {provider} API key in a .env file, right here in this folder:\n\n"
         f"       {env_var}=your_key_here\n\n"
         "     Type your real key directly into that line yourself. Never paste it anywhere\n"
         "     else, including into a chat with an AI assistant helping you set this up.\n",
-        "  3. Add one decorator. A \"decorator\" is just one line of Python, written directly\n"
+        "  2. Add one decorator. A \"decorator\" is just one line of Python, written directly\n"
         "     above a function, that wraps it with extra behavior without changing what's\n"
         "     inside it. Here's exactly what to do:\n\n"
         f"       Open {file_hint} in your editor and find the function called {function_hint}.\n"
-        "       Add these two lines directly above its `def` line, so it looks like this:\n\n"
-        "         import referee\n\n"
-        "         @referee.protect(config=\"referee.yaml\")\n"
-        f"         def {function_hint}(user_input: str) -> str:\n"
-        "             ...   # everything already inside this function stays exactly as it was\n\n"
-        "     If your agent is already a plain Python function like this, you're done, that's\n"
-        "     the whole change. If you built it with CrewAI, LangGraph, or Google's ADK, your\n"
-        "     real agent doesn't look like a plain function; you need one small adapter\n"
-        "     function first, with the decorator on the adapter instead. See the examples/\n"
-        "     folder in this project, there's a complete, working file for each of those.\n",
-        "  4. Run your agent once, by hand, with any question. Before building a whole\n"
-        "     dataset, just check you can see the guardrail and trace output printed\n"
-        "     underneath the answer. That's confirmation it's wired up correctly.\n",
-        "  5. Then run: referee dataset new",
+        "       Add these two NEW lines (marked with +) directly above its `def` line:\n\n"
+        "         + import referee\n"
+        "         +\n"
+        "         + @referee.protect(config=\"referee.yaml\")\n"
+        f"           def {function_hint}(user_input: str) -> str:\n"
+        "               ...   <- everything below this line stays exactly as it was\n\n"
+        "     If your agent is already a plain Python function like that, you're done, that's\n"
+        "     the whole change.\n\n"
+        "     Built it with CrewAI, LangGraph, or Google's ADK instead? Your real agent\n"
+        "     doesn't look like a plain function, it's a Crew, a graph, or a Runner, so you\n"
+        "     need one small adapter function first (a few lines that call your real agent\n"
+        "     and hand back a plain string), with the decorator on THAT adapter instead. A\n"
+        "     complete, working example for each framework, showing exactly what that adapter\n"
+        f"     looks like, lives here:\n\n       {_EXAMPLES_URL}\n",
+        "  3. Run your agent once, by hand, with any question, right in this same terminal:\n\n"
+        f"       referee try \"a question for your agent\"\n\n"
+        "     This calls your agent exactly once and prints the answer. If you also see\n"
+        "     guardrail and trace lines printed above it, the decorator is wired up correctly\n"
+        "     and you're ready for the next step. This works no matter which framework your\n"
+        "     agent uses underneath, since it's calling the same entry_point you gave in\n"
+        "     Question 1.\n",
+        "  4. Then run: referee dataset new",
     )
 
     return config_path
