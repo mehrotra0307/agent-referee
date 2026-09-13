@@ -167,10 +167,10 @@ def init_project(
     )
 
     next_steps(
-        env_step,
-        decorator_step,
-        try_step,
-        "  4. Then run: referee dataset new",
+        (None, env_step),
+        (None, decorator_step),
+        (None, try_step),
+        ("referee dataset new", "Step 4. Build your first test list."),
     )
 
     return config_path

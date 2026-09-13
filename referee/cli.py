@@ -34,9 +34,10 @@ from referee.guardrails.scope_check import check_scope
 from referee.guardrails.test_suite import ADVERSARIAL_TEST_CASES
 from referee.init_project import init_project
 from referee.protect import protect
-from referee.ui import callout, divider, next_steps, pause, type_out
+from referee.ui import callout, divider, example, next_steps, pause, type_out
 
 _PROVIDERS = ["gemini", "openai", "anthropic"]
+_EXAMPLE_DATASET_URL = "https://github.com/mehrotra0307/agent-referee/blob/main/referee/eval/example_dataset.json"
 
 _DEMO_CONFIG = {
     "agent": {"name": "demo-agent"},
@@ -205,15 +206,24 @@ def dataset_new(output: str):
     """Build a golden dataset interactively. Fully offline — no API key needed."""
     click.echo(_DATASET_INTRO)
 
-    example_path = Path(__file__).parent / "eval" / "example_dataset.json"
-    click.echo(f"Need inspiration first? A read-only worked example lives at:\n  {example_path}\n")
+    click.echo(
+        f"Want more ideas before you start? A read-only sample dataset, covering every\n"
+        f"question type this tool supports, is on GitHub here:\n  {_EXAMPLE_DATASET_URL}\n"
+    )
+
+    example(
+        "imagine your agent runs a pizza shop",
+        {
+            "Question a user might ask": "What time do you close?",
+            "What a correct answer must mention": "11 PM",
+            "Category": "hours",
+        },
+    )
 
     click.echo(
-        "Worked example, so you know what these three questions are actually asking:\n"
-        "  Imagine your agent runs a pizza shop.\n"
-        "    Question a user might ask:           What time do you close?\n"
-        "    What must a correct answer mention:  11 PM\n"
-        "    Category:                            hours\n"
+        "That's it, that's the whole shape. Below, you'll be asked those same three\n"
+        "things, once per question, as many times as you want. Press Enter on a blank\n"
+        "question when you're done.\n"
     )
 
     entries = []
@@ -229,7 +239,13 @@ def dataset_new(output: str):
             break
 
         must_mention = click.prompt("What must a correct answer mention? (comma-separated phrases)")
-        category = click.prompt("Category (a short label to group this test case)", default="general")
+
+        click.echo(
+            "\nCategory is just a label for grouping related questions later, it doesn't\n"
+            "affect scoring at all. Reuse the same word across multiple questions on\n"
+            "purpose, e.g. \"hours\" for every hours-related question.\n"
+        )
+        category = click.prompt("Category", default="general")
 
         entries.append(
             {
@@ -257,10 +273,12 @@ def dataset_new(output: str):
 
     callout("SAVED", f"{len(entries)} test case(s) written to {output}", color="green")
     next_steps(
-        "  Next: referee eval run\n"
-        "  Asks your agent every question you just wrote, checks each real answer against\n"
-        "  what you said a correct one should mention, and grades it, one sentence at a\n"
-        "  time, per test case."
+        (
+            "referee eval run",
+            "Asks your agent every question you just wrote, checks each real answer\n"
+            "against what you said a correct one should mention, and grades it, one\n"
+            "sentence at a time, per test case.",
+        ),
     )
 
 
@@ -285,12 +303,15 @@ def try_once(question: str, config: str):
     callout("AGENT'S ANSWER", response, color="green")
 
     next_steps(
-        "  See guardrail and trace lines above, and a real answer in the box? Your setup\n"
-        "  is wired up correctly.\n",
-        "  Next: referee dataset new\n"
-        "  Builds a short list of test questions for your agent, fully offline, no API key\n"
-        "  needed for this step. That's what lets referee eval run (later) grade your agent\n"
-        "  automatically instead of you reading every answer by hand.",
+        (None, "Saw guardrail and trace lines above, and a real answer in the box?\nThat means your setup is wired up correctly."),
+        (
+            "referee dataset new",
+            "Walks you through a few questions about your agent (what might someone\n"
+            "ask, what should a correct answer mention) and saves YOUR OWN answers as\n"
+            "a test file. Nothing here is auto-generated, and no API key is needed for\n"
+            "this step. This is what lets referee eval run (later) grade your agent\n"
+            "automatically instead of you reading every answer by hand.",
+        ),
     )
 
 
@@ -341,9 +362,12 @@ def eval_run(config: str):
         raise SystemExit(1)
 
     next_steps(
-        "  Next: referee guardrails test\n"
-        "  Same idea, but for safety instead of quality — throws real attack attempts at\n"
-        "  your configured guardrails and reports which ones actually got caught."
+        (
+            "referee guardrails test",
+            "Same idea as this command, but for safety instead of quality: throws\n"
+            "real attack attempts at your configured guardrails and reports which\n"
+            "ones actually got caught.",
+        ),
     )
 
 
@@ -446,9 +470,16 @@ def guardrails_test(config: str, local_only: bool):
         raise SystemExit(1)
 
     next_steps(
-        "  Next: referee dashboard   (optional — needs: pip install agent-referee[dashboard])\n"
-        "  A local webpage showing your latest eval report and this guardrail report side by\n"
-        "  side. Everything above already works without it, this is just a nicer view."
+        (
+            "pip install agent-referee[dashboard]",
+            "Optional, one-time. Adds the local dashboard (a small webpage on your own\n"
+            "machine showing your latest eval report and this guardrail report side by\n"
+            "side). Everything above already works without it, this is just a nicer view.",
+        ),
+        (
+            "referee dashboard",
+            "Run this after the install above, whenever you want to look at both reports.",
+        ),
     )
 
 
@@ -518,7 +549,7 @@ def demo():
         "(Scene 2), a trace recording every step as it happens (Scene 1), and an evaluator "
         "grading the answer afterward (Scene 3). Zero setup, zero API key, all three pillars."
     )
-    next_steps("referee init   — wire this into your real agent")
+    next_steps(("referee init", "Wire this into your real agent — three quick questions, no API key."))
 
 
 @main.command()

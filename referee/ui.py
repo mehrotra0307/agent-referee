@@ -27,13 +27,44 @@ def divider(title: str, color: str = "cyan") -> None:
     click.echo()
 
 
-def next_steps(*lines: str) -> None:
-    """Print a clearly marked "what to do next" block, consistent across every command."""
+def next_steps(*steps) -> None:
+    """Print a clearly marked "what to do next" block, consistent across every command.
+
+    Each step is a (command, description) tuple. command is a literal
+    string to run, shown on its own bold/colored line prefixed with '$',
+    or None for a step with no command (a plain confirmation note).
+    description is plain text explaining that step; long lines are left
+    as-is (the caller should hand-wrap around ~75 chars).
+
+    Deliberately structured instead of accepting raw pre-formatted
+    strings: leaving spacing to be typed correctly by hand at every call
+    site is exactly how "Next: referee dataset new" and its description
+    ended up jammed onto adjacent lines with no gap between them in an
+    earlier version of this function.
+    """
     click.echo()
     click.echo(click.style("→ NEXT", bold=True, fg="magenta"))
     click.echo(click.style("─" * 58, dim=True))
-    for line in lines:
-        click.echo(line)
+    for command, description in steps:
+        click.echo()
+        if command:
+            click.echo(click.style(f"  $ {command}", fg="cyan", bold=True))
+            click.echo()
+        for line in description.splitlines():
+            click.echo(f"  {line}" if line else "")
+    click.echo()
+
+
+def example(title: str, fields: dict) -> None:
+    """Print a labeled, indented example block (e.g. a worked question/answer/
+    category triple), visually distinct from surrounding prose with its own
+    colored label — so an example never blends into the paragraph around it.
+    """
+    click.echo()
+    click.echo(click.style(f"◆ EXAMPLE — {title}", bold=True, fg="yellow"))
+    label_width = max((len(key) for key in fields), default=0)
+    for key, value in fields.items():
+        click.echo(f"    {key.ljust(label_width)}   {value}")
     click.echo()
 
 
