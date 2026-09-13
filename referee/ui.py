@@ -66,7 +66,7 @@ def next_steps(*steps) -> None:
         click.echo()
         if command:
             click.echo("  Run this:")
-            click.echo(click.style(f"  $ {command}", fg="cyan", bold=True))
+            click.echo(click.style(f"  {command}", fg="cyan", bold=True))
             click.echo()
         for line in description.splitlines():
             click.echo(f"  {line}" if line else "")

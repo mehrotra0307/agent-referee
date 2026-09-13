@@ -18,7 +18,7 @@ def _get_model_and_util():
             "Embedding-similarity scoring needs sentence-transformers, which isn't "
             "installed by default (it pulls in PyTorch, ~500MB+, and most projects "
             "never use this evaluator). Install it with:\n\n"
-            "    pip install agent-referee[embedding]\n"
+            '    pip install "agent-referee[embedding]"\n'
         ) from exc
 
     _model = SentenceTransformer("all-MiniLM-L6-v2")

@@ -92,8 +92,13 @@ That's the whole rule, no AI judging another AI here.
 
 _GUARDRAILS_TEST_INTRO = """
 A guardrail is a bouncer, not a grader. It doesn't care if an answer is good —
-it cares whether a message is safe enough to let through at all. Real systems
-usually run several different kinds of guardrail together:
+it cares whether a message is safe enough to let through at all. You did not
+have to configure any of this by hand: the moment you added the one decorator
+earlier, sensible guardrail defaults switched on automatically for your agent.
+Nothing to build, nothing to turn on separately, this command just tests the
+defaults that are already running.
+
+There are 5 real kinds of guardrail. This library ships all 5, on by default:
   · PII detection      — regex, catches emails/phones/card numbers. Free.
   · Injection detection — regex, catches known jailbreak phrasing. Free.
   · Rate limiting       — a counter, caps messages per session. Free.
@@ -101,12 +106,12 @@ usually run several different kinds of guardrail together:
   · Toxicity / groundedness — an AI call, catches unsafe or made-up answers.
 
 This command throws a small set of real attack attempts (fake emails,
-prompt-injection phrases, off-topic questions) at your setup and tells you
-which ones actually got blocked. The free, local checks (PII, injection)
-always run; the scope-check attack only runs if you've turned that on in
-referee.yaml, since it's the one that spends a real API call. For each
+prompt-injection phrases, off-topic questions) at your agent's actual
+guardrails and tells you which ones got blocked. The free, local checks (PII,
+injection) always run; the scope-check attack only runs if that's turned on
+in referee.yaml, since it's the one that spends a real API call. For each
 attack below: PASS means it correctly got blocked, FAIL means it slipped
-through your configured guardrails untouched.
+through untouched — real signal either way, not a trick question.
 """
 
 
@@ -469,16 +474,20 @@ def eval_run(config: str):
     next_steps(
         (
             "referee guardrails test",
-            "Same idea as this command, but for safety instead of quality: throws\n"
-            "real attack attempts at your configured guardrails and reports which\n"
-            "ones actually got caught.",
+            "Same idea as this command, but for safety instead of quality. A guardrail\n"
+            "is a live check that blocks a risky message before it does damage, not a\n"
+            "grade after the fact. You didn't configure any yourself, sensible defaults\n"
+            "(PII detection, prompt-injection detection, rate limiting, and more)\n"
+            "switched on automatically the moment you added the one decorator earlier.\n"
+            "This command throws real attack attempts at those defaults and reports\n"
+            "which ones actually got caught.",
         ),
     )
 
 
 @main.group(name="guardrails")
 def guardrails_group():
-    """Test your configured guardrails against packaged adversarial attacks."""
+    """Test your agent's guardrails (on by default) against packaged adversarial attacks."""
 
 
 @guardrails_group.command(name="test")
@@ -489,7 +498,7 @@ def guardrails_group():
     help="Skip the scope-check attack, which makes a real LLM call using your configured key.",
 )
 def guardrails_test(config: str, local_only: bool):
-    """Run packaged adversarial attacks against your configured guardrails."""
+    """Run packaged adversarial attacks against your agent's guardrails."""
     click.echo(_GUARDRAILS_TEST_INTRO)
 
     scope_cfg = {}
@@ -617,7 +626,7 @@ def guardrails_test(config: str, local_only: bool):
 
     next_steps(
         (
-            "pip install agent-referee[dashboard]",
+            'pip install "agent-referee[dashboard]"',
             "Optional, one-time, ~180MB (mostly Streamlit's own dependencies). Adds a\n"
             "local webpage on your own machine showing both reports side by side, with\n"
             "your agent's actual answers visible too, not just pass/fail counts.",
@@ -713,7 +722,7 @@ def dashboard():
     except ImportError:
         click.echo(
             "The dashboard needs Streamlit, which isn't installed by default. Install it with:\n\n"
-            "    pip install agent-referee[dashboard]\n"
+            '    pip install "agent-referee[dashboard]"\n'
         )
         raise SystemExit(1)
 

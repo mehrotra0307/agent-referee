@@ -215,7 +215,7 @@ on the topic-scope check and want to skip the one attack that spends a real API 
 guardrail attack results, side by side.
 
 ```bash
-pip install agent-referee[dashboard]
+pip install "agent-referee[dashboard]"
 referee dashboard
 ```
 
@@ -266,9 +266,9 @@ imports any of those frameworks, so it keeps working with whatever shows up next
 ## Optional extras, and why they're optional
 
 ```bash
-pip install agent-referee[embedding]   # semantic-similarity scoring, needs PyTorch, ~395MB
-pip install agent-referee[dashboard]   # the local web UI, needs Streamlit, ~180MB
-pip install agent-referee[all]         # both, if you want everything
+pip install "agent-referee[embedding]"   # semantic-similarity scoring, needs PyTorch, ~395MB
+pip install "agent-referee[dashboard]"   # the local web UI, needs Streamlit, ~180MB
+pip install "agent-referee[all]"         # both, if you want everything
 ```
 
 Everything else, including all three provider SDKs (Gemini, OpenAI, Anthropic), ships in core.

@@ -78,7 +78,7 @@ where exact phrase matching is too brittle:
   `reference_answer`, instead of requiring an exact phrase. Good for answers that can be phrased
   several correct ways but should still share most of the same words.
 - **`embedding_similarity`** scores *meaning* overlap against a `reference_answer`, catching a
-  correct answer phrased completely differently. This needs `pip install agent-referee[embedding]`.
+  correct answer phrased completely differently. This needs `pip install "agent-referee[embedding]"`.
 - **`llm_judge`** sends the real answer to a second LLM call, which grades it against a written
   `rubric`, from 1 to 5. The most flexible option, and the one that costs an API call per test
   case.
