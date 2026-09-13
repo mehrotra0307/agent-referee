@@ -161,12 +161,21 @@ awaits your ADK agent and hands back the plain text of its final answer. The com
 pattern is in [`examples/adk_example.py`](examples/adk_example.py), same one-decorator promise,
 just with ADK's own shape underneath it instead of a bare function.
 
-**Checkpoint, don't skip this:** before doing anything else, run your agent once, by hand, with
-any question, and actually look at the output. You should see guardrail and trace lines printed
-underneath the answer. If you see that, the wiring is correct and you've earned the right to
-move on. If you don't see it, something's off in `referee.yaml` before your first real one.
+### Step 5: Check it actually worked
 
-### Step 5: Build a test list, with zero API calls
+**What's happening:** don't skip this. Call your real agent once, by hand, right in this same
+terminal, and actually look at the output.
+
+```bash
+referee try "any question for your agent"
+```
+
+This loads your agent from `referee.yaml` and calls it exactly once. You should see guardrail
+and trace lines printed above a clearly boxed final answer. If you see that, the wiring is
+correct and you've earned the right to move on. If you don't, something's off in `referee.yaml`
+before you go build a whole test list on top of it.
+
+### Step 6: Build a test list, with zero API calls
 
 **What's happening:** a golden dataset is just a list of questions and what a correct answer
 should mention, so you can check your agent's real answers automatically instead of reading
@@ -181,7 +190,7 @@ your very first test list costs nothing. There's also a small example dataset sh
 tool for inspiration, the wizard tells you exactly where to find it. Full walkthrough:
 [docs/your-first-dataset.md](docs/your-first-dataset.md).
 
-### Step 6: Grade your agent against that list
+### Step 7: Grade your agent against that list
 
 **What's happening:** this is the "report card" moment. Your agent gets asked every question you
 just wrote, and each answer gets checked and explained in one plain sentence.
@@ -193,12 +202,13 @@ referee eval run
 Saves a full report to a `reports/` folder, and exits with an error code if anything marked
 "critical" failed, on purpose, so the exact same command can block a bad deploy in a CI pipeline.
 
-### Step 7: Attack your own guardrails, on purpose
+### Step 8: Attack your own guardrails, on purpose
 
 **What's happening:** a guardrail you've never actually tested is a guardrail you're just
-hoping works. This throws a small set of real attacks (prompt-injection phrasing, fake emails,
-fake phone numbers, off-topic questions) at whatever you've got configured, and tells you which
-ones actually got caught.
+hoping works. This does **not** call your real agent at all. It has 8 fixed attack strings
+built into the library itself (`referee/guardrails/test_suite.py`), and sends each one straight
+to the library's own checking functions: `check_pii()` and `check_injection()` (plain regex,
+zero API calls) or `check_scope()` (one real API call, only if you've turned scope-check on).
 
 ```bash
 referee guardrails test
@@ -207,25 +217,36 @@ referee guardrails test
 **Never even heard the word "guardrail" before today?** Good news: this command assumes exactly
 that. It doesn't require you to have set anything up first: the PII and injection checks are
 always on and run instantly, for free, with zero setup. Add `--local-only` if you've also turned
-on the topic-scope check and want to skip the one attack that spends a real API call.
+on the topic-scope check and want to skip the one attack that spends a real API call. Once
+everything's blocked, it also prints a real, colored, bordered status table right in your
+terminal, no install needed, showing everything set up so far in one glance.
 
-### Step 8: Look at everything in one place (optional, but nice)
+### Step 9: Look at everything in one place (optional, but nice)
 
 **What's happening:** a small local webpage showing your last report card and your last
-guardrail attack results, side by side.
+guardrail attack results side by side, including your agent's actual answer text, not just
+pass/fail counts like the free terminal table above.
 
 ```bash
 pip install "agent-referee[dashboard]"
 referee dashboard
 ```
 
+![The Agent Referee dashboard](docs/assets/dashboard-screenshot.png)
+
+Yes, this is a real screenshot, taken against a real run, not a mockup drawn by someone who's
+never opened Figma. Red means something's wrong, green means it isn't, and if you can't tell
+those apart from three feet away, that's a you problem, not a design problem.
+
 This is the one step that needs a second install command, and here's why, honestly: the
 dashboard is built on Streamlit, which drags in about 180MB of its own dependencies (mostly
-`pyarrow`, for a data table you'll look at maybe twice a day). That's real weight for something
-optional, so it's opt-in instead of forced on everyone. Nothing here is hosted by anyone but
-you, it's a page rendered on your own machine.
+`pyarrow`, for a data table you'll look at maybe twice a day). That download lands inside your
+project's own virtual environment (`.venv/`), not scattered anywhere else — delete that folder
+and it's gone. That's real weight for something optional, so it's opt-in instead of forced on
+everyone. Nothing here is hosted by anyone but you, it's a page rendered on your own machine,
+and it opens your browser automatically once it starts.
 
-That's the whole flow. Steps 1 through 7 need exactly one install command, ever. Step 8 is a
+That's the whole flow. Steps 1 through 8 need exactly one install command, ever. Step 9 is a
 nice-to-have that costs one more, explained instead of hidden.
 
 ## The one place you still write code by hand
