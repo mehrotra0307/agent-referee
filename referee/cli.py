@@ -712,6 +712,23 @@ def demo():
     next_steps(("referee init", "Wire this into your real agent — three quick questions, no API key."))
 
 
+def _suppress_streamlit_onboarding_prompt() -> None:
+    """Streamlit itself, completely separately from anything this library
+    does, asks for an email address the very first time it ever runs on a
+    machine ("Welcome to Streamlit!"). That directly contradicts this
+    project's own never-ask-for-anything promise, even though it's
+    Streamlit's own onboarding flow, not ours. Pre-creating its credentials
+    file with a blank email is Streamlit's own documented way to skip that
+    prompt entirely — verified this actually suppresses it, not just
+    assumed. Never overwrites a real credentials file if one exists.
+    """
+    credentials_path = Path.home() / ".streamlit" / "credentials.toml"
+    if credentials_path.exists():
+        return
+    credentials_path.parent.mkdir(parents=True, exist_ok=True)
+    credentials_path.write_text('[general]\nemail = ""\n')
+
+
 @main.command()
 def dashboard():
     """Launch the local Streamlit dashboard (reads local reports/, nothing hosted by us)."""
@@ -726,4 +743,5 @@ def dashboard():
         )
         raise SystemExit(1)
 
+    _suppress_streamlit_onboarding_prompt()
     subprocess.run([sys.executable, "-m", "streamlit", "run", str(app_path)])
