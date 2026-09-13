@@ -92,31 +92,29 @@ def init_project(
         "  later, git can never accidentally upload it.\n"
     )
 
-    env_path = target.resolve() / ".env"
-    if env_path.exists():
-        env_step = (
-            f"  1. You already have a .env file here:\n\n       {env_path}\n\n"
-            f"     Open THAT file (as a file, in a text editor app, like VS Code, Sublime, "
-            "or even\n     TextEdit, not this terminal window) and add this line to it, or "
-            "update it if a\n     line for this key is already there:\n\n"
-            f"       {env_var}=your_key_here\n\n"
-            "     Replace your_key_here with your real key. By the way: nothing checks "
-            "whether\n     that key is even valid at this point, we're just getting it "
-            "saved somewhere\n     your own code can read it later. No pressure.\n"
-        )
-    else:
-        env_step = (
-            "  1. Create a new file called exactly .env in this folder:\n\n"
-            f"       {target.resolve()}\n\n"
-            "     Easiest way: in this same terminal, run this command (it creates the file "
-            "for you):\n\n"
-            f"       echo \"{env_var}=your_key_here\" > .env\n\n"
-            f"     Then open that new .env file (as a file, in a text editor app, not this "
-            "terminal\n     window, and not a chat with an AI assistant helping you set this "
-            f"up) and\n     replace your_key_here with your real {provider} key. By the way: "
-            "nothing checks\n     whether that key is even valid at this point, we're just "
-            "getting it saved\n     somewhere your own code can read it later. No pressure.\n"
-        )
+    project_folder = target.resolve().name
+
+    env_step = (
+        "  1. Create a new file called exactly .env, in the same folder as everything else\n"
+        "     here. Not a subfolder, not one level up, the same one. Concretely, using your\n"
+        "     actual project, it should end up looking like this:\n\n"
+        f"       {project_folder}/                 <- this folder, right where you are now\n"
+        f"       ├── {file_hint:<22} <- your agent\n"
+        "       ├── referee.yaml           <- just created, a moment ago\n"
+        "       └── .env                   <- create this one next, same level as the rest\n\n"
+        "     Easiest way to create it: in this same terminal, run this command. It works\n"
+        "     whether or not a .env file already exists here, it only ever adds a line,\n"
+        "     never deletes or overwrites anything:\n\n"
+        f"       echo \"{env_var}=your_key_here\" >> .env\n\n"
+        "     Then open that .env file (as a file, in a text editor app like VS Code,\n"
+        "     Sublime, or even TextEdit, NOT this terminal window, and not a chat with an AI\n"
+        f"     assistant helping you set this up) and replace your_key_here with your real\n"
+        f"     {provider} key.\n\n"
+        "     And since we know exactly what you're thinking: no, nothing here checks "
+        "whether\n     that key is real, valid, or even shaped like a real key. We're not "
+        "peeking. This\n     step is just getting it saved somewhere your own code can read "
+        "it later.\n"
+    )
 
     next_steps(
         env_step,
