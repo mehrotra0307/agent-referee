@@ -73,15 +73,40 @@ An evaluation is a report card. It asks your agent every question in your golden
 dataset, checks each real answer against what you said a correct one should
 mention, and tells you what passed and what failed, in plain English, one
 sentence at a time. Nothing here changes your agent — it only grades it.
+
+There are 5 real ways to score an answer, and different tools use different
+ones:
+  · Deterministic     — exact phrase / refusal-marker matching. Free, instant.
+  · ROUGE             — word-overlap scoring against a reference answer.
+  · Embedding          — meaning-overlap scoring (catches different wording).
+  · LLM-as-judge       — a second AI call grades the first one's answer.
+  · Human review       — a person reads real conversations by hand.
+
+Your dataset uses deterministic, the simplest and most predictable one,
+because that's what `referee dataset new` always writes. Here's exactly what
+that means for every question below: your real agent gets called with the
+exact question, and it PASSES if its real answer contains any one of the
+phrases you said a correct answer must mention, and FAILS if it doesn't.
+That's the whole rule, no AI judging another AI here.
 """
 
 _GUARDRAILS_TEST_INTRO = """
 A guardrail is a bouncer, not a grader. It doesn't care if an answer is good —
-it cares whether a message is safe enough to let through at all. This command
-throws a small set of real attack attempts (fake emails, prompt-injection
-phrases, off-topic questions) at your setup and tells you which ones actually
-got blocked. Never seen the word "guardrail" before today? This is the
-fastest way to actually understand what one does.
+it cares whether a message is safe enough to let through at all. Real systems
+usually run several different kinds of guardrail together:
+  · PII detection      — regex, catches emails/phones/card numbers. Free.
+  · Injection detection — regex, catches known jailbreak phrasing. Free.
+  · Rate limiting       — a counter, caps messages per session. Free.
+  · Scope / topic check — an AI call, catches off-topic questions.
+  · Toxicity / groundedness — an AI call, catches unsafe or made-up answers.
+
+This command throws a small set of real attack attempts (fake emails,
+prompt-injection phrases, off-topic questions) at your setup and tells you
+which ones actually got blocked. The free, local checks (PII, injection)
+always run; the scope-check attack only runs if you've turned that on in
+referee.yaml, since it's the one that spends a real API call. For each
+attack below: PASS means it correctly got blocked, FAIL means it slipped
+through your configured guardrails untouched.
 """
 
 
@@ -548,6 +573,19 @@ def guardrails_test(config: str, local_only: bool):
 
     if not all_blocked:
         raise SystemExit(1)
+
+    phase(
+        "YOU'RE SET UP",
+        "Quick recap of what's actually running on your agent now:\n\n"
+        "  1. Guardrails + tracing — one decorator, automatic on every real call.\n"
+        "  2. A golden dataset — your own questions, saved as a plain JSON file.\n"
+        "  3. Evaluation — referee eval run grades real answers against it.\n"
+        "  4. Guardrail testing — real attacks, just confirmed they get blocked.\n\n"
+        "That's real evaluation, real guardrails, and real observability, running on\n"
+        "your own agent, with your own key, on your own machine. Nothing hosted by\n"
+        "anyone else at any point.",
+        color="green",
+    )
 
     next_steps(
         (
