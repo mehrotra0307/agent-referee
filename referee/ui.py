@@ -5,8 +5,10 @@ formatting. Small and dependency-free beyond click, which is already a
 core dependency of the whole package.
 """
 
+import json
 import sys
 import time
+from pathlib import Path
 
 import click
 
@@ -94,6 +96,66 @@ def callout(label: str, text: str, color: str = "green") -> None:
     for line in text.splitlines() or [""]:
         click.echo(click.style("┃ ", fg=color) + line)
     click.echo(click.style("┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", fg=color))
+    click.echo()
+
+
+def _latest_report(pattern: str):
+    reports_dir = Path("reports")
+    if not reports_dir.exists():
+        return None
+    matches = sorted(reports_dir.glob(pattern), reverse=True)
+    if not matches:
+        return None
+    return json.loads(matches[0].read_text())
+
+
+def status_table() -> None:
+    """Print a compact, colored terminal summary of everything set up on this
+    agent so far, reading only local files (golden_dataset.json and the
+    latest reports/*.json). A real, zero-extra-dependency alternative to the
+    full Streamlit dashboard for anyone who doesn't want the ~180MB install
+    just to see where things stand.
+    """
+    click.echo()
+    click.echo(click.style("═" * 58, fg="cyan"))
+    click.echo(click.style("  STATUS — everything set up on this agent so far", bold=True, fg="cyan"))
+    click.echo(click.style("═" * 58, fg="cyan"))
+    click.echo()
+
+    click.echo(
+        click.style("  ✓ ", fg="green", bold=True)
+        + "Guardrails + tracing     ON — automatic on every real call, via the decorator"
+    )
+
+    dataset_path = Path("golden_dataset.json")
+    if dataset_path.exists():
+        count = len(json.loads(dataset_path.read_text()).get("test_cases", []))
+        click.echo(click.style("  ✓ ", fg="green", bold=True) + f"Golden dataset           {count} question(s) saved")
+    else:
+        click.echo(click.style("  · ", dim=True) + "Golden dataset           not built yet — referee dataset new")
+
+    eval_report = _latest_report("eval_run_*.json")
+    if eval_report:
+        ok = eval_report["passed"] == eval_report["total_tests"]
+        mark = click.style("✓", fg="green", bold=True) if ok else click.style("✗", fg="red", bold=True)
+        pct = eval_report["pass_rate"] * 100
+        click.echo(f"  {mark} Evaluation               {eval_report['passed']}/{eval_report['total_tests']} passed ({pct:.0f}%)")
+    else:
+        click.echo(click.style("  · ", dim=True) + "Evaluation               not run yet — referee eval run")
+
+    guard_report = _latest_report("guardrails_run_*.json")
+    if guard_report:
+        ok = guard_report["blocked"] == guard_report["total_attacks"]
+        mark = click.style("✓", fg="green", bold=True) if ok else click.style("✗", fg="red", bold=True)
+        click.echo(f"  {mark} Guardrail attacks        {guard_report['blocked']}/{guard_report['total_attacks']} blocked")
+    else:
+        click.echo(click.style("  · ", dim=True) + "Guardrail attacks        not run yet — referee guardrails test")
+
+    click.echo()
+    click.echo(
+        "  Want the fuller version, side by side with your actual answers? That's what\n"
+        "  `referee dashboard` is for — this table above is the free, no-install summary."
+    )
     click.echo()
 
 

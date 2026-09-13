@@ -34,7 +34,7 @@ from referee.guardrails.scope_check import check_scope
 from referee.guardrails.test_suite import ADVERSARIAL_TEST_CASES
 from referee.init_project import init_project
 from referee.protect import protect
-from referee.ui import callout, divider, example, next_steps, pause, phase, type_out
+from referee.ui import callout, divider, example, next_steps, pause, phase, status_table, type_out
 
 _PROVIDERS = ["gemini", "openai", "anthropic"]
 _EXAMPLE_DATASET_URL = "https://github.com/mehrotra0307/agent-referee/blob/main/referee/eval/example_dataset.json"
@@ -522,10 +522,13 @@ def guardrails_test(config: str, local_only: bool):
 
         if check_type == "pii":
             result = check_pii(case["input"])
+            how = "free, local regex check — no API call, your key was never touched"
         elif check_type == "injection":
             result = check_injection(case["input"])
+            how = "free, local regex check — no API call, your key was never touched"
         else:
             result = check_scope(case["input"], scope_cfg.get("description", ""), provider_config)
+            how = f"real API call to {provider_config.get('name', 'your provider')}, using your configured key"
 
         total += 1
         blocked = not result["allowed"]
@@ -535,6 +538,7 @@ def guardrails_test(config: str, local_only: bool):
         status = click.style("PASS", fg="green", bold=True) if blocked else click.style("FAIL", fg="red", bold=True)
         click.echo(f"[{status}] {case['id']} ({case['category']})")
         click.echo(f"       Attack simulated: {case['attack_description']}")
+        click.echo(click.style(f"       How it was checked: {how}", dim=True))
         if not blocked:
             click.echo(click.style("       This guardrail let the attack through — it was not caught.", fg="red"))
 
@@ -571,34 +575,63 @@ def guardrails_test(config: str, local_only: bool):
         color="green" if all_blocked else "red",
     )
 
-    if not all_blocked:
-        raise SystemExit(1)
+    if all_blocked:
+        phase(
+            "YOU'RE SET UP",
+            "Quick recap of what's actually running on your agent now:\n\n"
+            "  1. Guardrails + tracing — one decorator, automatic on every real call.\n"
+            "  2. A golden dataset — your own questions, saved as a plain JSON file.\n"
+            "  3. Evaluation — referee eval run grades real answers against it.\n"
+            "  4. Guardrail testing — real attacks, just confirmed they get blocked.\n\n"
+            "That's real evaluation, real guardrails, and real observability, running on\n"
+            "your own agent, with your own key, on your own machine. Nothing hosted by\n"
+            "anyone else at any point.",
+            color="green",
+        )
+    else:
+        phase(
+            "SOME ATTACKS GOT THROUGH — here's what that means",
+            "This is real, useful signal, not a bug in this library: one or more of your\n"
+            "guardrails didn't catch an attack it should have. Most likely cause if it's\n"
+            "the scope check specifically: the description you gave in referee.yaml\n"
+            "(guardrails.input.scope_check.description) is a bit loose, or the AI call\n"
+            "judged that particular message differently than you expected.\n\n"
+            "Two real options, neither is required right now:\n"
+            "  1. Tighten that description in referee.yaml, then run this command again.\n"
+            "  2. Note it and move on — everything below still works either way.",
+            color="red",
+        )
 
-    phase(
-        "YOU'RE SET UP",
-        "Quick recap of what's actually running on your agent now:\n\n"
-        "  1. Guardrails + tracing — one decorator, automatic on every real call.\n"
-        "  2. A golden dataset — your own questions, saved as a plain JSON file.\n"
-        "  3. Evaluation — referee eval run grades real answers against it.\n"
-        "  4. Guardrail testing — real attacks, just confirmed they get blocked.\n\n"
-        "That's real evaluation, real guardrails, and real observability, running on\n"
-        "your own agent, with your own key, on your own machine. Nothing hosted by\n"
-        "anyone else at any point.",
-        color="green",
+    status_table()
+
+    click.echo(click.style("═" * 58, dim=True))
+    click.echo(
+        click.style("  ALL MANDATORY STEPS ARE DONE", bold=True, fg="green" if all_blocked else "yellow")
+    )
+    click.echo(click.style("═" * 58, dim=True))
+    click.echo()
+    click.echo(
+        "That's the whole guided flow, start to finish. Nothing else is required.\n"
+        "Everything from here is optional:"
     )
 
     next_steps(
         (
             "pip install agent-referee[dashboard]",
-            "Optional, one-time. Adds the local dashboard (a small webpage on your own\n"
-            "machine showing your latest eval report and this guardrail report side by\n"
-            "side). Everything above already works without it, this is just a nicer view.",
+            "Optional, one-time, ~180MB (mostly Streamlit's own dependencies). Adds a\n"
+            "local webpage on your own machine showing both reports side by side, with\n"
+            "your agent's actual answers visible too, not just pass/fail counts.",
         ),
         (
             "referee dashboard",
-            "Run this after the install above, whenever you want to look at both reports.",
+            "Run this after the install above, whenever you want the fuller view. It\n"
+            "starts a local web server and opens your browser to it automatically — no\n"
+            "account, nothing sent anywhere, closing the terminal shuts it down.",
         ),
     )
+
+    if not all_blocked:
+        raise SystemExit(1)
 
 
 @main.command()
