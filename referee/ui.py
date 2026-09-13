@@ -37,6 +37,19 @@ def next_steps(*lines: str) -> None:
     click.echo()
 
 
+def callout(label: str, text: str, color: str = "green") -> None:
+    """Print text set apart with a left border and a colored label, so a
+    result (a final answer, a pass/fail summary) doesn't get lost among
+    whatever else was printed just before it, like trace lines.
+    """
+    click.echo()
+    click.echo(click.style(f"┏━ {label}", bold=True, fg=color))
+    for line in text.splitlines() or [""]:
+        click.echo(click.style("┃ ", fg=color) + line)
+    click.echo(click.style("┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", fg=color))
+    click.echo()
+
+
 def type_out(text: str, delay: float = 0.018) -> None:
     """Print text one character at a time, so it reads as something happening live."""
     for char in text:

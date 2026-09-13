@@ -120,19 +120,21 @@ def init_project(
         "it later.\n"
     )
 
-    next_steps(
-        env_step,
+    decorator_step = (
         "  2. Add one decorator. A \"decorator\" is just one line of Python, written directly\n"
         "     above a function, that wraps it with extra behavior without changing what's\n"
-        "     inside it. Here's exactly what to do:\n\n"
-        f"       Open {file_hint} (as a file, in a text editor app, not this terminal) and\n"
-        f"       find the function called {function_hint}.\n"
-        "       Add these two NEW lines (marked with +) directly above its `def` line:\n\n"
-        "         + import referee\n"
-        "         +\n"
-        "         + @referee.protect(config=\"referee.yaml\")\n"
-        f"           def {function_hint}(user_input: str) -> str:\n"
-        "               ...   <- everything below this line stays exactly as it was\n\n"
+        "     inside it.\n\n"
+        f"     Open {file_hint} (as a file, in a text editor app, not this terminal) and find\n"
+        f"     the function called {function_hint}. That's your real file and function name,\n"
+        "     straight from your answer to Question 1, not a generic example, so it's already\n"
+        "     exactly right for your project.\n\n"
+        "     Copy exactly these two lines, character for character. Nothing below is a\n"
+        "     symbol or a marker, it's the literal code:\n\n"
+        "         import referee\n\n"
+        "         @referee.protect(config=\"referee.yaml\")\n\n"
+        f"     Paste them directly above your {function_hint} function's own `def` line,\n"
+        "     whatever that line already says. Don't retype or change that line, or anything\n"
+        "     inside the function, just add these two lines above it.\n\n"
         "     If your agent is already a plain Python function like that, you're done, that's\n"
         "     the whole change.\n\n"
         "     Built it with CrewAI, LangGraph, or Google's ADK instead? Your real agent\n"
@@ -140,14 +142,34 @@ def init_project(
         "     need one small adapter function first (a few lines that call your real agent\n"
         "     and hand back a plain string), with the decorator on THAT adapter instead. A\n"
         "     complete, working example for each framework, showing exactly what that adapter\n"
-        f"     looks like, lives here:\n\n       {_EXAMPLES_URL}\n",
-        "  3. Run your agent once, by hand, with any question, right in this same terminal:\n\n"
-        f"       referee try \"a question for your agent\"\n\n"
-        "     This calls your agent exactly once and prints the answer. If you also see\n"
-        "     guardrail and trace lines printed above it, the decorator is wired up correctly\n"
-        "     and you're ready for the next step. This works no matter which framework your\n"
-        "     agent uses underneath, since it's calling the same entry_point you gave in\n"
-        "     Question 1.\n",
+        f"     looks like, lives here:\n\n       {_EXAMPLES_URL}\n"
+    )
+
+    try_step = (
+        "  3. Run your agent once, by hand, right in this same terminal. Replace the text in\n"
+        "     quotes below with an actual question, that's a placeholder, not something to\n"
+        "     copy exactly as it is:\n\n"
+        "       referee try \"type any question here\"\n\n"
+        "     What you should expect to see (illustration only, your real numbers and answer\n"
+        "     will look different, this is just the shape of it):\n\n"
+        "       ────────────────────────────────────────────────────────\n"
+        "       LIVE TRACE — printed as it happens, below\n"
+        "       ────────────────────────────────────────────────────────\n"
+        "         · input_guardrail (0.3ms) — guardrail.allowed=True\n"
+        "         · agent_call (612.0ms)\n"
+        "         · output_guardrail (0.2ms) — guardrail.allowed=True\n\n"
+        "       ┏━ AGENT'S ANSWER\n"
+        "       ┃ We're open 11 AM to 11 PM, every day.\n"
+        "       ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "     Some trace lines above, then your real answer clearly boxed off at the end. If\n"
+        "     you see something in roughly that shape, even with completely different words\n"
+        "     and numbers, it's wired up correctly and you're ready for the next step.\n"
+    )
+
+    next_steps(
+        env_step,
+        decorator_step,
+        try_step,
         "  4. Then run: referee dataset new",
     )
 

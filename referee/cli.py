@@ -24,7 +24,7 @@ from referee.guardrails.scope_check import check_scope
 from referee.guardrails.test_suite import ADVERSARIAL_TEST_CASES
 from referee.init_project import init_project
 from referee.protect import protect
-from referee.ui import divider, next_steps, pause, type_out
+from referee.ui import callout, divider, next_steps, pause, type_out
 
 _PROVIDERS = ["gemini", "openai", "anthropic"]
 
@@ -253,9 +253,10 @@ def try_once(question: str, config: str):
     cfg = load_config(config)
     agent_fn = load_entry_point(cfg["agent"]["entry_point"])
 
-    click.echo(f"\nCalling your agent with: {question!r}\n")
+    click.echo(f"\nCalling your agent with: {question!r}")
+    divider("LIVE TRACE — printed as it happens, below", color="yellow")
     response = agent_fn(question)
-    click.echo(f"\nAgent's answer: {response}\n")
+    callout("AGENT'S ANSWER", response, color="green")
 
 
 @main.group(name="eval")
