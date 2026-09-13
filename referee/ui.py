@@ -11,6 +11,21 @@ import time
 import click
 
 
+def phase(title: str, description: str, color: str = "magenta") -> None:
+    """Announce moving into a whole new phase (evaluation, guardrails, etc.) —
+    more prominent than divider(), which marks a sub-section within one
+    command, not a shift to a different part of the overall workflow.
+    """
+    click.echo()
+    click.echo(click.style("═" * 58, fg=color))
+    click.echo(click.style(f"  {title}", bold=True, fg=color))
+    click.echo(click.style("═" * 58, fg=color))
+    click.echo()
+    for line in description.splitlines():
+        click.echo(line)
+    click.echo()
+
+
 def divider(title: str, color: str = "cyan") -> None:
     """Print a labeled section break, e.g. "QUESTION 1 of 3 — ..." or "SCENE 2 — ...".
 
@@ -48,6 +63,7 @@ def next_steps(*steps) -> None:
     for command, description in steps:
         click.echo()
         if command:
+            click.echo("  Run this:")
             click.echo(click.style(f"  $ {command}", fg="cyan", bold=True))
             click.echo()
         for line in description.splitlines():

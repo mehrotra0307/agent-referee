@@ -34,7 +34,7 @@ from referee.guardrails.scope_check import check_scope
 from referee.guardrails.test_suite import ADVERSARIAL_TEST_CASES
 from referee.init_project import init_project
 from referee.protect import protect
-from referee.ui import callout, divider, example, next_steps, pause, type_out
+from referee.ui import callout, divider, example, next_steps, pause, phase, type_out
 
 _PROVIDERS = ["gemini", "openai", "anthropic"]
 _EXAMPLE_DATASET_URL = "https://github.com/mehrotra0307/agent-referee/blob/main/referee/eval/example_dataset.json"
@@ -216,6 +216,19 @@ def dataset_group():
 @click.option("--output", default="golden_dataset.json", show_default=True)
 def dataset_new(output: str):
     """Build a golden dataset interactively. Fully offline — no API key needed."""
+    phase(
+        "STARTING: EVALUATION",
+        "You've already got guardrails and tracing running on every real call, from the\n"
+        "decorator you added earlier. Evaluation is the third piece: grading your\n"
+        "agent's answers after the fact, like a report card, instead of blocking\n"
+        "anything live.\n\n"
+        "It's two steps. First, right here, you build a golden dataset: a list of\n"
+        "questions your agent might get, and what a correct answer should mention.\n"
+        "Second, once that's saved, `referee eval run` asks your agent every one of\n"
+        "those questions and grades each real answer against what you wrote.\n\n"
+        "Let's build the dataset first.",
+    )
+
     click.echo(_DATASET_INTRO)
 
     click.echo(
@@ -305,6 +318,32 @@ def dataset_new(output: str):
         "to see exactly what's in it — nothing hidden, nothing binary.",
         color="green",
     )
+
+    first = entries[0]
+    divider("Understanding the file you just created", color="yellow")
+    click.echo("Nothing here is private or hidden from you, so here's exactly what each field means,")
+    click.echo("using your own first question as the real example:\n")
+    click.echo(f'  "id": "{first["id"]}"')
+    click.echo("      A stable name for this one test. Survives you editing the question later.\n")
+    click.echo(f'  "category": "{first["category"]}"')
+    click.echo("      The label you gave. Purely for grouping results, doesn't affect scoring.\n")
+    click.echo(f'  "input": "{first["input"]}"')
+    click.echo("      The exact question, word for word, that will get sent to your agent.\n")
+    click.echo(f'  "eval_type": "{first["eval_type"]}"')
+    click.echo("      Which of Agent Referee's 5 scoring methods grades this question. This\n"
+                "      wizard always picks \"deterministic\" (exact-phrase matching), the simplest\n"
+                "      and most predictable one.\n")
+    click.echo(f'  "check": "{first["check"]}"')
+    click.echo("      The specific rule: pass if the real answer contains ANY ONE of the phrases\n"
+                "      below, not all of them.\n")
+    click.echo(f'  "expected_contains": {first["expected_contains"]}')
+    click.echo("      The phrase(s) you said a correct answer must mention.\n")
+    click.echo(f'  "severity": "{first["severity"]}"')
+    click.echo("      How serious a failure here is. This wizard always writes \"medium\" — hand-edit\n"
+                "      the file later to mark anything as \"critical\" (referee eval run treats\n"
+                "      critical failures as build-blocking) or \"low\".\n")
+    click.echo(f"Open {output_path} yourself any time — it's exactly this shape, once per question.\n")
+
     next_steps(
         (
             None,
