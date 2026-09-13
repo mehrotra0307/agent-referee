@@ -13,16 +13,28 @@ _INTRO_SEEN_FILE = Path(".referee/.seen_intro")
 
 _INTRO_TEXT = """
 Agent Referee is now watching this call. Here's what just happened, once, so you
-know what to expect going forward:
+know what to expect going forward.
 
-  1. A "span" started — a timed record of this one call, with a unique ID.
+This is observability, sometimes also called tracing: quietly recording what an
+agent actually did, step by step, without changing its behavior at all. There
+are traditionally 3 pillars to it:
+  · Traces  — the shape of ONE request, step by step. What this library does.
+  · Logs    — free-form text messages, one event at a time.
+  · Metrics — numbers aggregated over MANY requests (average latency, etc).
+This library focuses on traces, printed straight to your terminal by default,
+or sent to a real backend like Langfuse Cloud if you configure one.
+
+Concretely, on every call to your decorated function, in order:
+
+  1. A "span" starts — a timed record of this one call, with a unique ID.
      Every guardrail check and your own agent call gets nested inside it,
      building a small tree that shows exactly what happened and how long
      each step took. This is standard OpenTelemetry, the same tracing
      format Google Cloud, AWS, and most observability tools speak.
-  2. Your configured input guardrails ran, before your agent code did.
-  3. Your agent function ran.
-  4. Your configured output guardrails ran, before the result was returned.
+  2. Your input guardrails run, before your agent code does.
+  3. Your agent function runs.
+  4. Your output guardrails run, before the result is returned.
+  5. The span ends.
 
 Full explanation: docs/how-it-works.md
 (This message only prints once — state is tracked in .referee/.seen_intro)

@@ -6,11 +6,46 @@ core dependency of the whole package.
 """
 
 import json
+import re
 import sys
 import time
 from pathlib import Path
 
 import click
+
+_ANSI = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _visible_len(text: str) -> int:
+    return len(_ANSI.sub("", text))
+
+
+def _draw_table(headers: list, rows: list) -> None:
+    """Render a real bordered grid table (box-drawing characters), not just
+    an indented list. Column widths are computed from visible text length,
+    ignoring ANSI color codes, so styled cells (a colored ✓/✗) still align.
+    """
+    widths = [
+        max(_visible_len(headers[i]), *(_visible_len(row[i]) for row in rows)) if rows else _visible_len(headers[i])
+        for i in range(len(headers))
+    ]
+
+    def _line(left: str, mid: str, right: str, fill: str = "─") -> str:
+        return left + mid.join(fill * (w + 2) for w in widths) + right
+
+    def _row(cells) -> str:
+        parts = []
+        for cell, width in zip(cells, widths):
+            pad = width - _visible_len(cell)
+            parts.append(f" {cell}{' ' * pad} ")
+        return "│" + "│".join(parts) + "│"
+
+    click.echo(click.style(_line("┌", "┬", "┐"), dim=True))
+    click.echo(_row([click.style(h, bold=True) for h in headers]))
+    click.echo(click.style(_line("├", "┼", "┤"), dim=True))
+    for row in rows:
+        click.echo(_row(row))
+    click.echo(click.style(_line("└", "┴", "┘"), dim=True))
 
 
 def phase(title: str, description: str, color: str = "magenta") -> None:
@@ -122,39 +157,40 @@ def status_table() -> None:
     click.echo(click.style("═" * 58, fg="cyan"))
     click.echo()
 
-    click.echo(
-        click.style("  ✓ ", fg="green", bold=True)
-        + "Guardrails + tracing     ON — automatic on every real call, via the decorator"
-    )
+    ok_mark = click.style("✓", fg="green", bold=True)
+    fail_mark = click.style("✗", fg="red", bold=True)
+    pending_mark = click.style("·", dim=True)
+
+    rows = [[ok_mark, "Guardrails + tracing", "ON, automatic on every real call via the decorator"]]
 
     dataset_path = Path("golden_dataset.json")
     if dataset_path.exists():
         count = len(json.loads(dataset_path.read_text()).get("test_cases", []))
-        click.echo(click.style("  ✓ ", fg="green", bold=True) + f"Golden dataset           {count} question(s) saved")
+        rows.append([ok_mark, "Golden dataset", f"{count} question(s) saved"])
     else:
-        click.echo(click.style("  · ", dim=True) + "Golden dataset           not built yet — referee dataset new")
+        rows.append([pending_mark, "Golden dataset", "not built yet — referee dataset new"])
 
     eval_report = _latest_report("eval_run_*.json")
     if eval_report:
-        ok = eval_report["passed"] == eval_report["total_tests"]
-        mark = click.style("✓", fg="green", bold=True) if ok else click.style("✗", fg="red", bold=True)
+        mark = ok_mark if eval_report["passed"] == eval_report["total_tests"] else fail_mark
         pct = eval_report["pass_rate"] * 100
-        click.echo(f"  {mark} Evaluation               {eval_report['passed']}/{eval_report['total_tests']} passed ({pct:.0f}%)")
+        rows.append([mark, "Evaluation", f"{eval_report['passed']}/{eval_report['total_tests']} passed ({pct:.0f}%)"])
     else:
-        click.echo(click.style("  · ", dim=True) + "Evaluation               not run yet — referee eval run")
+        rows.append([pending_mark, "Evaluation", "not run yet — referee eval run"])
 
     guard_report = _latest_report("guardrails_run_*.json")
     if guard_report:
-        ok = guard_report["blocked"] == guard_report["total_attacks"]
-        mark = click.style("✓", fg="green", bold=True) if ok else click.style("✗", fg="red", bold=True)
-        click.echo(f"  {mark} Guardrail attacks        {guard_report['blocked']}/{guard_report['total_attacks']} blocked")
+        mark = ok_mark if guard_report["blocked"] == guard_report["total_attacks"] else fail_mark
+        rows.append([mark, "Guardrail attacks", f"{guard_report['blocked']}/{guard_report['total_attacks']} blocked"])
     else:
-        click.echo(click.style("  · ", dim=True) + "Guardrail attacks        not run yet — referee guardrails test")
+        rows.append([pending_mark, "Guardrail attacks", "not run yet — referee guardrails test"])
+
+    _draw_table(["", "Step", "Result"], rows)
 
     click.echo()
     click.echo(
         "  Want the fuller version, side by side with your actual answers? That's what\n"
-        "  `referee dashboard` is for — this table above is the free, no-install summary."
+        "  referee dashboard is for — this table above is the free, no-install summary."
     )
     click.echo()
 
