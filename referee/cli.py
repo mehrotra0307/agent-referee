@@ -111,15 +111,24 @@ Exactly what this command does, mechanically, so none of it is a mystery:
   them means testing whether a specific message gets caught, which doesn't
   need your agent involved.
 
-  Instead, it has 8 pre-written attack strings built into this library (not
-  yours, not generated, always the same 8), and sends each one DIRECTLY to
-  the guardrail-checking code itself:
-    · The 3 PII and 3 injection attacks each run through a plain regex
-      pattern match against that exact string. No network call at all.
-    · The 2 scope attacks (only if you've turned scope-check on) each
-      trigger one real API call: your agent's topic description plus the
-      attack string get sent to your configured AI provider, asking "is
-      this on-topic or not."
+  Instead, it has 8 pre-written attack strings, and where those come from
+  and where they get checked is not a mystery either, both live inside the
+  agent-referee package itself, the same package you pip installed, not
+  your code, not something you write:
+
+    · The 8 attack strings themselves are just a Python list, sitting in
+      the file referee/guardrails/test_suite.py.
+    · The 3 PII and 3 injection attacks each get handed to a plain Python
+      function, check_pii() and check_injection(), in the file
+      referee/guardrails/input_validation.py. Each function just runs a
+      regex pattern match against the attack string. No network call.
+    · The 2 scope attacks each get handed to check_scope(), in
+      referee/guardrails/scope_check.py, which makes one real API call:
+      your agent's topic description plus the attack string get sent to
+      your configured AI provider, asking "is this on-topic or not."
+
+  If you're curious, all three of those files are real, readable Python,
+  right there in the library you already installed. Nothing hidden.
 
   PASS means the guardrail correctly said "block this." FAIL means it let
   the string through untouched. Only 3 of the 5 kinds above actually get
@@ -498,9 +507,9 @@ def eval_run(config: str):
             "grade after the fact. You didn't configure any yourself, sensible defaults\n"
             "switched on automatically the moment you added the one decorator earlier.\n"
             "This command does NOT call your agent: it sends 8 fixed attack strings,\n"
-            "built into this library, directly to the guardrail-checking code itself\n"
-            "(mostly plain regex, one type makes a real API call), and reports which\n"
-            "ones got correctly blocked.",
+            "shipped inside this library's own code (referee/guardrails/test_suite.py),\n"
+            "to that same library's own checking functions (mostly plain regex, one\n"
+            "type makes a real API call), and reports which ones got correctly blocked.",
         ),
     )
 
