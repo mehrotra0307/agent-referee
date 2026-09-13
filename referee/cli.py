@@ -263,6 +263,16 @@ def dataset_new(output: str):
         )
         category = click.prompt("Category", default="general")
 
+        expected_contains = [phrase.strip() for phrase in must_mention.split(",") if phrase.strip()]
+        click.echo(
+            f"\n  Question:              {question}\n"
+            f"  Must mention one of:   {expected_contains}\n"
+            f"  Category:              {category}\n"
+        )
+        if not click.confirm("Add this test case?", default=True):
+            click.echo("Discarded — let's redo this one.")
+            continue
+
         entries.append(
             {
                 "id": f"eval_{counter:03d}",
@@ -270,7 +280,7 @@ def dataset_new(output: str):
                 "input": question,
                 "eval_type": "deterministic",
                 "check": "contains_any",
-                "expected_contains": [phrase.strip() for phrase in must_mention.split(",") if phrase.strip()],
+                "expected_contains": expected_contains,
                 "severity": "medium",
             }
         )
@@ -285,15 +295,30 @@ def dataset_new(output: str):
         "description": "Golden dataset, built with `referee dataset new`.",
         "test_cases": entries,
     }
+    output_path = Path(output).resolve()
     Path(output).write_text(json.dumps(dataset, indent=2) + "\n")
 
-    callout("SAVED", f"{len(entries)} test case(s) written to {output}", color="green")
+    callout(
+        "SAVED",
+        f"{len(entries)} test case(s) written to:\n{output_path}\n\n"
+        "It's a plain text file, open it anytime in a text editor or your file browser\n"
+        "to see exactly what's in it — nothing hidden, nothing binary.",
+        color="green",
+    )
     next_steps(
         (
+            None,
+            "This file is the foundation of your whole evaluation setup. Every question\n"
+            "in it, and what you said a correct answer must mention, is what the next\n"
+            "command grades your real agent against.",
+        ),
+        (
             "referee eval run",
-            "Asks your agent every question you just wrote, checks each real answer\n"
-            "against what you said a correct one should mention, and grades it, one\n"
-            "sentence at a time, per test case.",
+            "This is evaluation: your agent gets asked every question above, its real\n"
+            "answer gets checked against what you said a correct one should mention,\n"
+            "and each one gets graded pass or fail with a plain-English reason. Run it\n"
+            "any time you change your agent's code or prompt, to catch a regression\n"
+            "before a real user does.",
         ),
     )
 
