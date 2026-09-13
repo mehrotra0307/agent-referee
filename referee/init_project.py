@@ -92,15 +92,39 @@ def init_project(
         "  later, git can never accidentally upload it.\n"
     )
 
+    env_path = target.resolve() / ".env"
+    if env_path.exists():
+        env_step = (
+            f"  1. You already have a .env file here:\n\n       {env_path}\n\n"
+            f"     Open THAT file (as a file, in a text editor app, like VS Code, Sublime, "
+            "or even\n     TextEdit, not this terminal window) and add this line to it, or "
+            "update it if a\n     line for this key is already there:\n\n"
+            f"       {env_var}=your_key_here\n\n"
+            "     Replace your_key_here with your real key. By the way: nothing checks "
+            "whether\n     that key is even valid at this point, we're just getting it "
+            "saved somewhere\n     your own code can read it later. No pressure.\n"
+        )
+    else:
+        env_step = (
+            "  1. Create a new file called exactly .env in this folder:\n\n"
+            f"       {target.resolve()}\n\n"
+            "     Easiest way: in this same terminal, run this command (it creates the file "
+            "for you):\n\n"
+            f"       echo \"{env_var}=your_key_here\" > .env\n\n"
+            f"     Then open that new .env file (as a file, in a text editor app, not this "
+            "terminal\n     window, and not a chat with an AI assistant helping you set this "
+            f"up) and\n     replace your_key_here with your real {provider} key. By the way: "
+            "nothing checks\n     whether that key is even valid at this point, we're just "
+            "getting it saved\n     somewhere your own code can read it later. No pressure.\n"
+        )
+
     next_steps(
-        f"  1. Save your {provider} API key in a .env file, right here in this folder:\n\n"
-        f"       {env_var}=your_key_here\n\n"
-        "     Type your real key directly into that line yourself. Never paste it anywhere\n"
-        "     else, including into a chat with an AI assistant helping you set this up.\n",
+        env_step,
         "  2. Add one decorator. A \"decorator\" is just one line of Python, written directly\n"
         "     above a function, that wraps it with extra behavior without changing what's\n"
         "     inside it. Here's exactly what to do:\n\n"
-        f"       Open {file_hint} in your editor and find the function called {function_hint}.\n"
+        f"       Open {file_hint} (as a file, in a text editor app, not this terminal) and\n"
+        f"       find the function called {function_hint}.\n"
         "       Add these two NEW lines (marked with +) directly above its `def` line:\n\n"
         "         + import referee\n"
         "         +\n"
