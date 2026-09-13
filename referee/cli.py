@@ -1,4 +1,5 @@
 import json
+import logging
 import subprocess
 import sys
 import warnings
@@ -14,6 +15,15 @@ import click
 # broken. Deliberately narrow: this doesn't touch any other warning.
 warnings.filterwarnings("ignore", message=".*end of life.*")
 warnings.filterwarnings("ignore", message=".*OpenSSL.*")
+
+# Separate mechanism, same goal: google-genai logs a WARNING (via Python's
+# logging module, not warnings.warn()) every time Gemini's response includes
+# a "thought_signature" part alongside text, which is normal and expected
+# whenever a model does any internal reasoning. It has nothing to do with
+# anything going wrong, but it prints straight into the middle of a live
+# trace and drowns it out. Raised only this one logger's threshold, nothing
+# else is touched.
+logging.getLogger("google_genai.types").setLevel(logging.ERROR)
 
 from referee.config import get_provider_config, load_config
 from referee.entry_point import load_entry_point
@@ -198,11 +208,20 @@ def dataset_new(output: str):
     example_path = Path(__file__).parent / "eval" / "example_dataset.json"
     click.echo(f"Need inspiration first? A read-only worked example lives at:\n  {example_path}\n")
 
+    click.echo(
+        "Worked example, so you know what these three questions are actually asking:\n"
+        "  Imagine your agent runs a pizza shop.\n"
+        "    Question a user might ask:           What time do you close?\n"
+        "    What must a correct answer mention:  11 PM\n"
+        "    Category:                            hours\n"
+    )
+
     entries = []
     counter = 1
     while True:
+        divider(f"Test case #{counter}", color="cyan")
         question = click.prompt(
-            f"Question #{counter} a user might ask your agent (Enter to finish)",
+            "Question a user might ask your agent (Enter to finish)",
             default="",
             show_default=False,
         )
@@ -235,7 +254,14 @@ def dataset_new(output: str):
         "test_cases": entries,
     }
     Path(output).write_text(json.dumps(dataset, indent=2) + "\n")
-    click.echo(f"\nWrote {len(entries)} test case(s) to {output}. Run `referee eval run` next.")
+
+    callout("SAVED", f"{len(entries)} test case(s) written to {output}", color="green")
+    next_steps(
+        "  Next: referee eval run\n"
+        "  Asks your agent every question you just wrote, checks each real answer against\n"
+        "  what you said a correct one should mention, and grades it, one sentence at a\n"
+        "  time, per test case."
+    )
 
 
 @main.command(name="try")
@@ -258,6 +284,15 @@ def try_once(question: str, config: str):
     response = agent_fn(question)
     callout("AGENT'S ANSWER", response, color="green")
 
+    next_steps(
+        "  See guardrail and trace lines above, and a real answer in the box? Your setup\n"
+        "  is wired up correctly.\n",
+        "  Next: referee dataset new\n"
+        "  Builds a short list of test questions for your agent, fully offline, no API key\n"
+        "  needed for this step. That's what lets referee eval run (later) grade your agent\n"
+        "  automatically instead of you reading every answer by hand.",
+    )
+
 
 @main.group(name="eval")
 def eval_group():
@@ -276,28 +311,40 @@ def eval_run(config: str):
     agent_fn = load_entry_point(agent_cfg["entry_point"])
     provider_config = get_provider_config(cfg)
 
-    click.echo(f"Running evaluation for '{agent_cfg['name']}' against {dataset_path}...\n")
+    click.echo(f"Running evaluation for '{agent_cfg['name']}' against {dataset_path}...")
+    divider("RESULTS — one line per test case", color="cyan")
 
     report = run_evaluation(dataset_path, agent_fn, provider_config, datetime.now().isoformat())
 
     for result in report["results"]:
-        status = "PASS" if result["passed"] else "FAIL"
+        passed = result["passed"]
+        status = click.style("PASS", fg="green", bold=True) if passed else click.style("FAIL", fg="red", bold=True)
         click.echo(f"[{status}] {result['id']} ({result['category']}, severity={result['severity']})")
         click.echo(f"       {result['reason']}")
-
-    click.echo("\n--- SUMMARY ---")
-    click.echo(f"Passed: {report['passed']}/{report['total_tests']} ({report['pass_rate'] * 100:.0f}%)")
-    click.echo(f"Critical failures: {report['critical_failures']}")
 
     reports_dir = Path("reports")
     reports_dir.mkdir(exist_ok=True)
     report_path = reports_dir / f"eval_run_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
     report_path.write_text(json.dumps(report, indent=2) + "\n")
-    click.echo(f"Full report saved to: {report_path}")
+
+    summary_color = "red" if report["critical_failures"] > 0 else "green"
+    callout(
+        "SUMMARY",
+        f"Passed: {report['passed']}/{report['total_tests']} ({report['pass_rate'] * 100:.0f}%)\n"
+        f"Critical failures: {report['critical_failures']}\n"
+        f"Full report saved to: {report_path}",
+        color=summary_color,
+    )
 
     if report["critical_failures"] > 0:
-        click.echo("\nBLOCKING: critical-severity test failure(s) detected.")
+        click.echo(click.style("BLOCKING: critical-severity test failure(s) detected.", fg="red", bold=True))
         raise SystemExit(1)
+
+    next_steps(
+        "  Next: referee guardrails test\n"
+        "  Same idea, but for safety instead of quality — throws real attack attempts at\n"
+        "  your configured guardrails and reports which ones actually got caught."
+    )
 
 
 @main.group(name="guardrails")
@@ -331,7 +378,7 @@ def guardrails_test(config: str, local_only: bool):
         )
         local_only = True
 
-    click.echo("Running packaged adversarial guardrail tests...\n")
+    divider("ATTACKS — one line per attempt", color="cyan")
 
     blocked_count = 0
     total = 0
@@ -341,7 +388,7 @@ def guardrails_test(config: str, local_only: bool):
         check_type = case["check"]
 
         if check_type == "scope" and (local_only or not scope_cfg.get("enabled")):
-            click.echo(f"[SKIP] {case['id']} ({case['category']}) — scope_check disabled or --local-only set")
+            click.echo(click.style("[SKIP] ", dim=True) + f"{case['id']} ({case['category']}) — scope_check disabled or --local-only set")
             continue
 
         if check_type == "pii":
@@ -356,10 +403,11 @@ def guardrails_test(config: str, local_only: bool):
         if blocked:
             blocked_count += 1
 
-        click.echo(f"[{'PASS' if blocked else 'FAIL'}] {case['id']} ({case['category']})")
+        status = click.style("PASS", fg="green", bold=True) if blocked else click.style("FAIL", fg="red", bold=True)
+        click.echo(f"[{status}] {case['id']} ({case['category']})")
         click.echo(f"       Attack simulated: {case['attack_description']}")
         if not blocked:
-            click.echo("       This guardrail let the attack through — it was not caught.")
+            click.echo(click.style("       This guardrail let the attack through — it was not caught.", fg="red"))
 
         case_results.append(
             {
@@ -369,9 +417,6 @@ def guardrails_test(config: str, local_only: bool):
                 "blocked": blocked,
             }
         )
-
-    click.echo("\n--- SUMMARY ---")
-    click.echo(f"Blocked {blocked_count}/{total} adversarial attacks.")
 
     reports_dir = Path("reports")
     reports_dir.mkdir(exist_ok=True)
@@ -388,10 +433,23 @@ def guardrails_test(config: str, local_only: bool):
         )
         + "\n"
     )
-    click.echo(f"Full report saved to: {report_path}")
 
-    if blocked_count < total:
+    all_blocked = blocked_count == total
+    callout(
+        "SUMMARY",
+        f"Blocked {blocked_count}/{total} adversarial attacks.\n"
+        f"Full report saved to: {report_path}",
+        color="green" if all_blocked else "red",
+    )
+
+    if not all_blocked:
         raise SystemExit(1)
+
+    next_steps(
+        "  Next: referee dashboard   (optional — needs: pip install agent-referee[dashboard])\n"
+        "  A local webpage showing your latest eval report and this guardrail report side by\n"
+        "  side. Everything above already works without it, this is just a nicer view."
+    )
 
 
 @main.command()
