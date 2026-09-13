@@ -94,9 +94,8 @@ _GUARDRAILS_TEST_INTRO = """
 A guardrail is a bouncer, not a grader. It doesn't care if an answer is good —
 it cares whether a message is safe enough to let through at all. You did not
 have to configure any of this by hand: the moment you added the one decorator
-earlier, sensible guardrail defaults switched on automatically for your agent.
-Nothing to build, nothing to turn on separately, this command just tests the
-defaults that are already running.
+earlier, sensible guardrail defaults switched on automatically. Nothing to
+build, nothing to turn on separately.
 
 There are 5 real kinds of guardrail. This library ships all 5, on by default:
   · PII detection      — regex, catches emails/phones/card numbers. Free.
@@ -105,13 +104,33 @@ There are 5 real kinds of guardrail. This library ships all 5, on by default:
   · Scope / topic check — an AI call, catches off-topic questions.
   · Toxicity / groundedness — an AI call, catches unsafe or made-up answers.
 
-This command throws a small set of real attack attempts (fake emails,
-prompt-injection phrases, off-topic questions) at your agent's actual
-guardrails and tells you which ones got blocked. The free, local checks (PII,
-injection) always run; the scope-check attack only runs if that's turned on
-in referee.yaml, since it's the one that spends a real API call. For each
-attack below: PASS means it correctly got blocked, FAIL means it slipped
-through untouched — real signal either way, not a trick question.
+Exactly what this command does, mechanically, so none of it is a mystery:
+
+  It does NOT call your agent function at all. Not once. Guardrails are
+  meant to catch a bad message BEFORE it ever reaches your agent, so testing
+  them means testing whether a specific message gets caught, which doesn't
+  need your agent involved.
+
+  Instead, it has 8 pre-written attack strings built into this library (not
+  yours, not generated, always the same 8), and sends each one DIRECTLY to
+  the guardrail-checking code itself:
+    · The 3 PII and 3 injection attacks each run through a plain regex
+      pattern match against that exact string. No network call at all.
+    · The 2 scope attacks (only if you've turned scope-check on) each
+      trigger one real API call: your agent's topic description plus the
+      attack string get sent to your configured AI provider, asking "is
+      this on-topic or not."
+
+  PASS means the guardrail correctly said "block this." FAIL means it let
+  the string through untouched. Only 3 of the 5 kinds above actually get
+  tested here, on purpose: rate limiting needs real repeated traffic to
+  mean anything, not one string, and toxicity/groundedness only ever checks
+  what your agent SAYS back, not what comes in, so there's no single
+  "attack string" version of it the same way.
+
+Bottom line, whether you've built your own guardrails before or never heard
+the word until today: this checks the guardrail logic itself is working,
+using fixed test inputs, with zero involvement from your actual agent code.
 """
 
 
@@ -477,10 +496,11 @@ def eval_run(config: str):
             "Same idea as this command, but for safety instead of quality. A guardrail\n"
             "is a live check that blocks a risky message before it does damage, not a\n"
             "grade after the fact. You didn't configure any yourself, sensible defaults\n"
-            "(PII detection, prompt-injection detection, rate limiting, and more)\n"
             "switched on automatically the moment you added the one decorator earlier.\n"
-            "This command throws real attack attempts at those defaults and reports\n"
-            "which ones actually got caught.",
+            "This command does NOT call your agent: it sends 8 fixed attack strings,\n"
+            "built into this library, directly to the guardrail-checking code itself\n"
+            "(mostly plain regex, one type makes a real API call), and reports which\n"
+            "ones got correctly blocked.",
         ),
     )
 
