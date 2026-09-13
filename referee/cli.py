@@ -85,6 +85,18 @@ fastest way to actually understand what one does.
 """
 
 
+def _require_nonblank(value: str) -> str:
+    """click.prompt's value_proc for a field that would silently create a
+    broken, always-failing test case if left blank or whitespace-only.
+    click.prompt() already re-asks on a truly empty answer by itself, but
+    only checks for the exact empty string — this also catches
+    whitespace-only input, and gives a reason instead of just re-asking
+    silently."""
+    if not value.strip():
+        raise click.UsageError("Can't be blank — this is what actually gets checked. Type at least one word or phrase.")
+    return value
+
+
 @click.group()
 @click.version_option()
 def main():
@@ -222,8 +234,9 @@ def dataset_new(output: str):
 
     click.echo(
         "That's it, that's the whole shape. Below, you'll be asked those same three\n"
-        "things, once per question, as many times as you want. Press Enter on a blank\n"
-        "question when you're done.\n"
+        "things, once per question, as many times as you want. When you're done, either\n"
+        "press Enter on a blank question, or type exit (or quit) as your answer, either\n"
+        "one stops the wizard the same way — nothing typed after that point gets used.\n"
     )
 
     entries = []
@@ -231,14 +244,17 @@ def dataset_new(output: str):
     while True:
         divider(f"Test case #{counter}", color="cyan")
         question = click.prompt(
-            "Question a user might ask your agent (Enter to finish)",
+            "Question a user might ask your agent (blank, or type exit, to finish)",
             default="",
             show_default=False,
         )
-        if not question:
+        if not question or question.strip().lower() in ("exit", "quit", "q", "cancel", "stop"):
             break
 
-        must_mention = click.prompt("What must a correct answer mention? (comma-separated phrases)")
+        must_mention = click.prompt(
+            "What must a correct answer mention? (comma-separated phrases)",
+            value_proc=_require_nonblank,
+        )
 
         click.echo(
             "\nCategory is just a label for grouping related questions later, it doesn't\n"
