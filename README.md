@@ -313,7 +313,8 @@ Typos, new examples, new guardrail checks, doc fixes, all welcome. See
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE). Built by Ashish Mehrotra. Every call reviewed by a referee who
+can't be bribed.
 
 ---
 
