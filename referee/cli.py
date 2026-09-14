@@ -156,7 +156,7 @@ def _require_nonblank(value: str) -> str:
 
 
 @click.group()
-@click.version_option()
+@click.version_option(package_name="agent-referee")
 def main():
     """Agent Referee — evaluation, guardrails, and observability for any AI agent."""
 
