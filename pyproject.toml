@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "agent-referee"
-version = "0.1.0"
+version = "0.1.1"
 description = "Plug any AI agent into real evaluation scoring, guardrails, and observability tracing in minutes — framework-agnostic, 100% free, no signup, never touches your API key."
 readme = "README.md"
 license = "MIT"
