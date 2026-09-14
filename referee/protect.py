@@ -105,6 +105,8 @@ def protect(config: Union[str, dict] = "referee.yaml") -> Callable:
                     if not guard_result["allowed"]:
                         span.set_attribute("guardrail.block_reason", guard_result["reason"])
                         return f"I can't help with that. ({guard_result['reason']})"
+                    elif guard_result["reason"]:
+                        span.set_attribute("guardrail.note", guard_result["reason"])
 
                 with tracer.start_as_current_span("agent_call"):
                     agent_response = fn(user_input)

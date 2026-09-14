@@ -39,6 +39,7 @@ it. We just don't do that.
 ## Try it before you install anything you'll actually use
 
 ```bash
+python3 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install agent-referee
 referee demo
 ```
@@ -84,8 +85,25 @@ you'll have learned nothing, and learning is half of what this project is for.
 
 ### Step 1: Install it
 
-**What's happening:** `pip` is Python's package manager, the thing that downloads and installs
-libraries. This one command gets you the whole tool.
+**What's happening:** two things, in order. First, a virtual environment: a small, self-contained
+Python just for this project, so `agent-referee` and its few dependencies don't mix with anything
+else on your machine, and the `referee` command works right away no matter what OS or Python setup
+you're on. Second, `pip`, Python's package manager, installs the tool into it.
+
+```bash
+mkdir my-agent-project && cd my-agent-project
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+On Windows, that last line is different (Command Prompt or PowerShell):
+
+```bash
+.venv\Scripts\activate
+```
+
+Either way, your terminal prompt now starts with `(.venv)` — that's your signal it worked. From
+here on, every command in this guide runs inside that same terminal window.
 
 ```bash
 pip install agent-referee
